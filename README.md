@@ -1,7 +1,6 @@
 # Magnet Loss in PyTorch
 
-This is a direct conversion from the Tensorflow version:
-[https://github.com/pumpikano/tf-magnet-loss](https://github.com/pumpikano/tf-magnet-loss)
+This is a direct conversion from the Tensorflow version: [pumpikano/tf-magnet-loss](https://github.com/pumpikano/tf-magnet-loss)
 
 
 ![Figure 3 from paper](https://raw.githubusercontent.com/pumpikano/tf-magnet-loss/master/magnet_loss.png)
@@ -12,6 +11,8 @@ operates on entire neighborhoods in the representation space and adaptively defi
 being optimized to account for the changing representations of the training data.
 
 ## Implementation
+
+Tested with python 3.6 + pytorch 0.4 + cuda 9.1
 
 The Magnet Loss function is implemented in `magnet_ops.py`. The function `magnet_loss` implements the exact
 loss function and requires class and cluster labels for each example. This formulation allows varying numbers
