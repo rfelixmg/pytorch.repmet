@@ -101,15 +101,12 @@ y = train_dataset.train_labels  # has 60,000 samples compared to tf version 55,0
 X = X.numpy().astype(np.float32)
 y = y.numpy().astype(np.uint8)
 
-# X = Variable(torch.from_numpy(X))
-
 # Define model and training parameters
 emb_dim = 2
 n_epochs = 15
 epoch_steps = int(ceil(float(X.shape[0]) / batch_size))
 n_steps = epoch_steps * n_epochs
 cluster_refresh_interval = epoch_steps
-
 
 
 # Model
@@ -125,7 +122,6 @@ cudnn.benchmark = True
 # criterion =
 optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
 
-
 # Get initial embedding
 extract = net
 initial_reps = compute_reps(extract, X, chunk_size)
@@ -140,15 +136,9 @@ for i in range(n_steps):
     # Sample batch and do forward-backward
     batch_example_inds, batch_class_inds = batch_builder.gen_batch()
     inputs = torch.from_numpy(X[batch_example_inds]).cuda()
-    labels =  torch.from_numpy(batch_class_inds).cuda()
+    labels = torch.from_numpy(batch_class_inds).cuda()
 
     outputs = net(inputs)
-    # outputs = Variable(torch.FloatTensor([[-1.9277,0.8476],
-    #                                      [-6.2712,0.3196],
-    #                                      [-0.7184,-3.6873],
-    #                                      [-3.8063,8.0471],
-    #                                      [2.7446,3.1479],
-    #                                      [-5.3863,1.2954]]))
     batch_loss, batch_example_losses = minibatch_magnet_loss(outputs, labels, m, d, alpha)
 
     optimizer.zero_grad()
