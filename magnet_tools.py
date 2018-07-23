@@ -7,7 +7,7 @@ https://github.com/pumpikano/tf-magnet-loss
 from math import ceil
 import numpy as np
 from sklearn.cluster import KMeans
-from torch.autograd import Variable
+# from torch.autograd import Variable
 
 
 class ClusterBatchBuilder(object):

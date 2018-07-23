@@ -1,7 +1,7 @@
 # import tensorflow as tf
 import torch
 import torch.nn.functional as F
-from torch.autograd import Variable
+# from torch.autograd import Variable
 import numpy as np
 
 
@@ -45,7 +45,7 @@ def magnet_loss(r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
 
     # Select distances of examples to their own centroid
     intra_cluster_mask = comparison_mask(clusters, torch.arange(n_clusters)).float()
-    intra_cluster_costs = (Variable(intra_cluster_mask).cuda() * sample_costs).sum(1)
+    intra_cluster_costs = (intra_cluster_mask.cuda() * sample_costs).sum(1)
 
     # Compute variance of intra-cluster distances
     N = r.shape[0]
@@ -57,9 +57,9 @@ def magnet_loss(r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
 
     # Compute denominator
     # diff_class_mask = tf.to_float(tf.logical_not(comparison_mask(classes, cluster_classes)))
-    diff_class_mask = (~comparison_mask(classes, cluster_classes).data).float()
+    diff_class_mask = (~comparison_mask(classes, cluster_classes)).float()
     denom_sample_costs = torch.exp(var_normalizer * sample_costs)
-    denominator = (Variable(diff_class_mask).cuda() * denom_sample_costs).sum(1)
+    denominator = (diff_class_mask.cuda() * denom_sample_costs).sum(1)
 
     # Compute example losses and total loss
     epsilon = 1e-8

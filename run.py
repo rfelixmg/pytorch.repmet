@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-from torch.autograd import Variable
+# from torch.autograd import Variable
 import torchvision
 import torchvision.transforms as transforms
 
@@ -90,7 +90,7 @@ def compute_reps(extract_fn, X, chunk_size):
     for i in range(chunks):
         start = i * chunk_size
         stop = start + chunk_size
-        chunk_reps = extract_fn(Variable(torch.from_numpy(X[start:stop]))).cpu().data.numpy()
+        chunk_reps = extract_fn(torch.from_numpy(X[start:stop])).detach().cpu().numpy()
         reps.append(chunk_reps)
     return np.vstack(reps)
 
@@ -139,8 +139,8 @@ for i in range(n_steps):
 
     # Sample batch and do forward-backward
     batch_example_inds, batch_class_inds = batch_builder.gen_batch()
-    inputs = Variable(torch.from_numpy(X[batch_example_inds])).cuda()
-    labels = Variable(torch.from_numpy(batch_class_inds)).cuda()
+    inputs = torch.from_numpy(X[batch_example_inds]).cuda()
+    labels =  torch.from_numpy(batch_class_inds).cuda()
 
     outputs = net(inputs)
     # outputs = Variable(torch.FloatTensor([[-1.9277,0.8476],
@@ -155,8 +155,8 @@ for i in range(n_steps):
     batch_loss.backward()
     optimizer.step()
 
-    batch_loss = batch_loss.data.cpu().numpy()[0]
-    batch_example_losses = batch_example_losses.data.cpu().numpy()
+    batch_loss = float(batch_loss.detach().cpu().numpy())
+    batch_example_losses = batch_example_losses.detach().cpu().numpy()
 
     # Update loss index
     batch_builder.update_losses(batch_example_inds, batch_example_losses)
@@ -179,10 +179,10 @@ final_reps = compute_reps(extract, X, chunk_size)
 # Plot loss curve
 plot_smooth(batch_losses)
 
-imgs = train_dataset.train_data[:n_plot]
+imgs = train_dataset.train_data.numpy()[:n_plot]
 imgs = np.reshape(imgs, [n_plot, 28, 28])
-plot_embedding(initial_reps[:n_plot], train_dataset.train_labels[:n_plot])
+plot_embedding(initial_reps[:n_plot], train_dataset.train_labels.numpy()[:n_plot])
 
-imgs = train_dataset.train_data[:n_plot]
+imgs = train_dataset.train_data.numpy()[:n_plot]
 imgs = np.reshape(imgs, [n_plot, 28, 28])
-plot_embedding(final_reps[:n_plot], train_dataset.train_labels[:n_plot])
+plot_embedding(final_reps[:n_plot], train_dataset.train_labels.numpy()[:n_plot])
