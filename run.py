@@ -1,22 +1,22 @@
 from __future__ import print_function
 
+from os.path import join
+
 from utils import *
 from magnet_ops import *
 from magnet_tools import *
 
+from data.stanford_dogs import StanDogs
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-# from torch.autograd import Variable
 import torchvision
 import torchvision.transforms as transforms
 
-# from tensorflow.examples.tutorials.mnist import input_data
-# mnist = input_data.read_data_sets('MNIST_data')
 
-
+DATA_PATH = '/media/hayden/UStorage/DATASETS/IMAGE'
 
 # Define magnet loss parameters
 m = 8
@@ -35,14 +35,23 @@ n_plot = 500
 assert torch.cuda.is_available(), 'Error: CUDA not found!'
 # device = torch.device("cuda:0") # Uncomment this to run on GPU
 
-train_dataset = torchvision.datasets.MNIST(root='data/mnist/',
-                                           train=True,
-                                           transform=transforms.ToTensor(),
-                                           download=True)
+# train_dataset = StanDogs(root=DATA_PATH,
+#                          cropped=True,
+#                          transform=transforms.ToTensor(),
+#                          download=True)
 
-test_dataset = torchvision.datasets.MNIST(root='data/mnist/',
-                                          train=False,
-                                          transform=transforms.ToTensor())
+# test_dataset = torchvision.datasets.Omniglot(root=DATA_PATH,
+#                                           transform=transforms.ToTensor(),
+#                                            download=True)
+
+# train_dataset = torchvision.datasets.MNIST(root='data/mnist/',
+#                                            train=True,
+#                                            transform=transforms.ToTensor(),
+#                                            download=True)
+#
+# test_dataset = torchvision.datasets.MNIST(root='data/mnist/',
+#                                           train=False,
+#                                           transform=transforms.ToTensor())
 
 # # Data loader
 # train_loader = torch.utils.data.DataLoader(dataset=train_dataset,

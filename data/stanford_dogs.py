@@ -3,7 +3,7 @@ from PIL import Image
 from os.path import join
 import os
 import torch.utils.data as data
-from torchvision.utils import download_url, check_integrity, list_dir, list_files
+from torchvision.datasets.utils import download_url, list_dir, list_files
 
 
 class StanDogs(data.Dataset):
@@ -11,48 +11,56 @@ class StanDogs(data.Dataset):
     Args:
         root (string): Root directory of dataset where directory
             ``omniglot-py`` exists.
-        background (bool, optional): If True, creates dataset from the "background" set, otherwise
-            creates from the "evaluation" set. This terminology is defined by the authors.
+        cropped (bool, optional): If true, the images will be cropped into the bounding box specified
+            in the annotations
         transform (callable, optional): A function/transform that  takes in an PIL image
             and returns a transformed version. E.g, ``transforms.RandomCrop``
         target_transform (callable, optional): A function/transform that takes in the
             target and transforms it.
-        download (bool, optional): If true, downloads the dataset zip files from the internet and
-            puts it in root directory. If the zip files are already downloaded, they are not
+        download (bool, optional): If true, downloads the dataset tar files from the internet and
+            puts it in root directory. If the tar files are already downloaded, they are not
             downloaded again.
     """
-    folder = 'omniglot-py'
-    download_url_prefix = 'http://vision.stanford.edu/aditya86/ImageNetDogs/'
-    zips_md5 = {
-        'images': 'images.tar',
-        'annotations': 'annotation.tar'
-    }
+    folder = 'StanfordDogs'
+    download_url_prefix = 'http://vision.stanford.edu/aditya86/ImageNetDogs'
 
-    def __init__(self, root, background=True,
-                 transform=None, target_transform=None,
+    def __init__(self,
+                 root,
+                 cropped=False,
+                 transform=None,
+                 target_transform=None,
                  download=False):
+
         self.root = join(os.path.expanduser(root), self.folder)
-        self.background = background
+        self.cropped = cropped
         self.transform = transform
         self.target_transform = target_transform
 
         if download:
             self.download()
 
-        if not self._check_integrity():
-            raise RuntimeError('Dataset not found or corrupted.' +
-                               ' You can use download=True to download it')
+        self.images_folder = join(self.root, 'Images')
+        self.annotations_folder = join(self.root, 'Annotation')
+        self._breeds = list_dir(self.images_folder)
 
-        self.target_folder = join(self.root, self._get_target_folder())
-        self._alphabets = list_dir(self.target_folder)
-        self._characters = sum([[join(a, c) for c in list_dir(join(self.target_folder, a))]
-                                for a in self._alphabets], [])
-        self._character_images = [[(image, idx) for image in list_files(join(self.target_folder, character), '.png')]
-                                  for idx, character in enumerate(self._characters)]
-        self._flat_character_images = sum(self._character_images, [])
+        if self.cropped:
+            self._breed_annotations = [[[(annotation, box, idx)
+                                        for box in self.get_boxes(join(self.annotations_folder, breed, annotation))]
+                                        for annotation in list_files(join(self.annotations_folder, breed), '')]
+                                        for idx, breed in enumerate(self._breeds)]
+            self._flat_breed_annotations = sum(sum(self._breed_annotations, []), [])
+
+            self._flat_breed_images = [(annotation+'.jpg', idx) for annotation, box, idx in self._flat_breed_annotations]
+        else:
+            self._breed_images = [[(image, idx) for image in list_files(join(self.images_folder, breed), '.jpg')]
+                                      for idx, breed in enumerate(self._breeds)]
+
+            self._flat_breed_images = sum(self._breed_images, [])
+
+        print('hi')
 
     def __len__(self):
-        return len(self._flat_character_images)
+        return len(self._flat_breed_images)
 
     def __getitem__(self, index):
         """
@@ -61,36 +69,45 @@ class StanDogs(data.Dataset):
         Returns:
             tuple: (image, target) where target is index of the target character class.
         """
-        image_name, character_class = self._flat_character_images[index]
-        image_path = join(self.target_folder, self._characters[character_class], image_name)
-        image = Image.open(image_path, mode='r').convert('L')
+        image_name, breed_class = self._flat_breed_images[index]
+        image_path = join(self.images_folder, self._breeds[breed_class], image_name)
+        image = Image.open(image_path).convert('RGB')
+
+        if self.cropped:
+            image = image.crop(self._flat_breed_annotations[index][1])
 
         if self.transform:
             image = self.transform(image)
 
         if self.target_transform:
-            character_class = self.target_transform(character_class)
+            breed_class = self.target_transform(breed_class)
 
-        return image, character_class
-
-    def _check_integrity(self):
-        zip_filename = self._get_target_folder()
-        if not check_integrity(join(self.root, zip_filename + '.zip'), self.zips_md5[zip_filename]):
-            return False
-        return True
+        return image, breed_class
 
     def download(self):
-        import zipfile
+        import tarfile
 
-        if self._check_integrity():
-            print('Files already downloaded and verified')
-            return
+        if os.path.exists(join(self.root, 'Images')) and os.path.exists(join(self.root, 'Annotation')):
+            if len(os.listdir(join(self.root, 'Images'))) == len(os.listdir(join(self.root, 'Annotation'))) == 120:
+                print('Files already downloaded and verified')
+                return
 
-        # TODO keep writing this
-        filename = 'images'
-        tar_filename = filename + '.tar'
-        url = self.download_url_prefix + '/' + tar_filename
-        download_url(url, self.root, tar_filename, self.zips_md5[filename])
-        print('Extracting downloaded file: ' + join(self.root, tar_filename))
-        with zipfile.ZipFile(join(self.root, tar_filename), 'r') as zip_file:
-            zip_file.extractall(self.root)
+        for filename in ['images', 'annotation']:
+            tar_filename = filename + '.tar'
+            url = self.download_url_prefix + '/' + tar_filename
+            download_url(url, self.root, tar_filename, None)
+            print('Extracting downloaded file: ' + join(self.root, tar_filename))
+            with tarfile.open(join(self.root, tar_filename), 'r') as tar_file:
+                tar_file.extractall(self.root)
+            os.remove(join(self.root, tar_filename))
+
+    def get_boxes(self, path):
+        import xml.etree.ElementTree
+        e = xml.etree.ElementTree.parse(path).getroot()
+        boxes = []
+        for objs in e.iter('object'):
+            boxes.append([int(objs.find('bndbox').find('xmin').text),
+                          int(objs.find('bndbox').find('ymin').text),
+                          int(objs.find('bndbox').find('xmax').text),
+                          int(objs.find('bndbox').find('ymax').text)])
+        return boxes
