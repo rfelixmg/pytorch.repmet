@@ -7,7 +7,6 @@ https://github.com/pumpikano/tf-magnet-loss
 from math import ceil
 import numpy as np
 from sklearn.cluster import KMeans
-# from torch.autograd import Variable
 
 
 class ClusterBatchBuilder(object):
@@ -40,7 +39,7 @@ class ClusterBatchBuilder(object):
         if self.centroids is None:
             self.centroids = np.zeros([self.num_classes * self.k, rep_data.shape[1]])
 
-        for c in range(self.num_classes):
+        for c in range(1,self.num_classes+1):  # Changed this to index from 1
 
             class_mask = self.labels == c
             class_examples = rep_data[class_mask]
