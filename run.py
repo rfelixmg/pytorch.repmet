@@ -17,10 +17,11 @@ import torchvision.transforms as transforms
 
 
 DATA_PATH = '/media/hayden/UStorage/DATASETS/IMAGE'
+DATA_PATH = '/media/hayden/Storage21/DATASETS/IMAGE'
 
 # Define magnet loss parameters
-m = 8
-d = 8
+m = 12
+d = 4
 k = 3
 alpha = 1.0
 batch_size = m * d
@@ -35,10 +36,17 @@ n_plot = 500
 assert torch.cuda.is_available(), 'Error: CUDA not found!'
 # device = torch.device("cuda:0") # Uncomment this to run on GPU
 
-# train_dataset = StanDogs(root=DATA_PATH,
-#                          cropped=True,
-#                          transform=transforms.ToTensor(),
-#                          download=True)
+train_dataset = StanDogs(root=DATA_PATH,
+                         train=True,
+                         cropped=False,
+                         transform=transforms.ToTensor(),
+                         download=True)
+
+test_dataset = StanDogs(root=DATA_PATH,
+                         train=False,
+                         cropped=False,
+                         transform=transforms.ToTensor(),
+                         download=True)
 
 # test_dataset = torchvision.datasets.Omniglot(root=DATA_PATH,
 #                                           transform=transforms.ToTensor(),

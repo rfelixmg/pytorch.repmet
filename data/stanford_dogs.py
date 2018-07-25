@@ -1,7 +1,10 @@
 from __future__ import print_function
+
 from PIL import Image
 from os.path import join
 import os
+import scipy.io
+
 import torch.utils.data as data
 from torchvision.datasets.utils import download_url, list_dir, list_files
 
@@ -26,12 +29,14 @@ class StanDogs(data.Dataset):
 
     def __init__(self,
                  root,
+                 train=True,
                  cropped=False,
                  transform=None,
                  target_transform=None,
                  download=False):
 
         self.root = join(os.path.expanduser(root), self.folder)
+        self.train = train
         self.cropped = cropped
         self.transform = transform
         self.target_transform = target_transform
@@ -39,25 +44,23 @@ class StanDogs(data.Dataset):
         if download:
             self.download()
 
+        split = self.load_split()
+
         self.images_folder = join(self.root, 'Images')
         self.annotations_folder = join(self.root, 'Annotation')
         self._breeds = list_dir(self.images_folder)
 
         if self.cropped:
-            self._breed_annotations = [[[(annotation, box, idx)
-                                        for box in self.get_boxes(join(self.annotations_folder, breed, annotation))]
-                                        for annotation in list_files(join(self.annotations_folder, breed), '')]
-                                        for idx, breed in enumerate(self._breeds)]
-            self._flat_breed_annotations = sum(sum(self._breed_annotations, []), [])
+            self._breed_annotations = [[(annotation, box, idx)
+                                        for box in self.get_boxes(join(self.annotations_folder, annotation))]
+                                        for annotation, idx in split]
+            self._flat_breed_annotations = sum(self._breed_annotations, [])
 
             self._flat_breed_images = [(annotation+'.jpg', idx) for annotation, box, idx in self._flat_breed_annotations]
         else:
-            self._breed_images = [[(image, idx) for image in list_files(join(self.images_folder, breed), '.jpg')]
-                                      for idx, breed in enumerate(self._breeds)]
+            self._breed_images = [(annotation+'.jpg', idx) for annotation, idx in split]
 
-            self._flat_breed_images = sum(self._breed_images, [])
-
-        print('hi')
+            self._flat_breed_images = self._breed_images
 
     def __len__(self):
         return len(self._flat_breed_images)
@@ -69,8 +72,8 @@ class StanDogs(data.Dataset):
         Returns:
             tuple: (image, target) where target is index of the target character class.
         """
-        image_name, breed_class = self._flat_breed_images[index]
-        image_path = join(self.images_folder, self._breeds[breed_class], image_name)
+        image_name, target_class = self._flat_breed_images[index]
+        image_path = join(self.images_folder, image_name)
         image = Image.open(image_path).convert('RGB')
 
         if self.cropped:
@@ -80,9 +83,9 @@ class StanDogs(data.Dataset):
             image = self.transform(image)
 
         if self.target_transform:
-            breed_class = self.target_transform(breed_class)
+            target_class = self.target_transform(target_class)
 
-        return image, breed_class
+        return image, target_class
 
     def download(self):
         import tarfile
@@ -92,7 +95,7 @@ class StanDogs(data.Dataset):
                 print('Files already downloaded and verified')
                 return
 
-        for filename in ['images', 'annotation']:
+        for filename in ['images', 'annotation', 'lists']:
             tar_filename = filename + '.tar'
             url = self.download_url_prefix + '/' + tar_filename
             download_url(url, self.root, tar_filename, None)
@@ -101,7 +104,8 @@ class StanDogs(data.Dataset):
                 tar_file.extractall(self.root)
             os.remove(join(self.root, tar_filename))
 
-    def get_boxes(self, path):
+    @staticmethod
+    def get_boxes(path):
         import xml.etree.ElementTree
         e = xml.etree.ElementTree.parse(path).getroot()
         boxes = []
@@ -111,3 +115,15 @@ class StanDogs(data.Dataset):
                           int(objs.find('bndbox').find('xmax').text),
                           int(objs.find('bndbox').find('ymax').text)])
         return boxes
+
+    def load_split(self):
+        if self.train:
+            split = scipy.io.loadmat(join(self.root, 'train_list.mat'))['annotation_list']
+            labels = scipy.io.loadmat(join(self.root, 'train_list.mat'))['labels']
+        else:
+            split = scipy.io.loadmat(join(self.root, 'test_list.mat'))['annotation_list']
+            labels = scipy.io.loadmat(join(self.root, 'test_list.mat'))['labels']
+
+        split = [item[0][0] for item in split]
+        labels = [item[0] for item in labels]
+        return list(zip(split, labels))
