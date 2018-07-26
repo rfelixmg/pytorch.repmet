@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib import offsetbox
 from mpl_toolkits.axes_grid1 import ImageGrid
 from sklearn.utils import linear_assignment_
+from sklearn.manifold import TSNE
 from scipy.stats import itemfreq
 from sklearn.cluster import KMeans
 from itertools import chain
@@ -108,6 +109,30 @@ def plot_embedding(X, y, imgs=None, title=None, savepath=None):
     else:
         plt.show()
     plt.clf()
+
+def graph(vectors, labels, savepath=None):
+
+    if vectors.shape[1] > 2:
+        try:
+            tsne = TSNE(n_components=2, verbose=0, perplexity=40, n_iter=300)
+            vectors = tsne.fit_transform(vectors)
+        except ValueError:
+            print('Value Error')
+
+    # plt.figure(figsize=(6, 5))
+    plt.figure()
+    colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', 'w', 'orange', 'purple']
+
+    clss = list(set(labels))
+    for i in range(len(labels)):
+        plt.scatter(vectors[i, 0], vectors[i, 1], facecolors='none', edgecolors=colors[clss.index(labels[i])%len(colors)], label=labels[i])
+
+    if savepath:
+        plt.savefig(savepath)
+    else:
+        plt.show()
+    plt.clf()
+
 
 def zip_chain(a, b):
     return list(chain(*zip(a, b)))

@@ -116,7 +116,8 @@ class ClusterBatchBuilder(object):
         # Sample examples uniformly from cluster
         batch_indexes = np.empty([self.m * self.d], int)
         for i, c in enumerate(clusters):
-            x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
+            x = np.random.choice(self.cluster_assignments[c], self.d, replace=True)  # if clusters have less than d samples we need to allow repick
+            # x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
             start = i * self.d
             stop = start + self.d
             batch_indexes[start:stop] = x

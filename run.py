@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from os.path import join
+import random
 
 from utils import *
 from magnet_ops import *
@@ -19,21 +20,18 @@ import torchvision.transforms as transforms
 DATA_PATH = '/media/hayden/UStorage/DATASETS/IMAGE'
 DATA_PATH = '/media/hayden/Storage21/DATASETS/IMAGE'
 
-plots_path = '/media/hayden/Storage21/MODELS/repmet/mnist/plots/'
+# plots_path = '/media/hayden/Storage21/MODELS/repmet/mnist/plots/'
+plots_path = '/media/hayden/Storage21/MODELS/repmet/standogs/plots/'
 
 # Define magnet loss parameters
-m = 8#12
-d = 8#4
+m = 12#8 # num clusters
+d = 4#8 # num examples
 k = 3
 alpha = 1.0
 batch_size = m * d
 
-chunk_size = 128
-n_plot = 500
-
-input_transforms = transforms.Compose([
-    transforms.RandomResizedCrop(224, ratio=(1, 1.3333)),
-    transforms.ToTensor()])
+chunk_size = 32#128
+n_plot = 32
 
 input_transforms = transforms.Compose([
     transforms.RandomResizedCrop(224, ratio=(1, 1.3333)),
@@ -44,30 +42,30 @@ input_transforms = transforms.Compose([
 assert torch.cuda.is_available(), 'Error: CUDA not found!'
 # device = torch.device("cuda:0") # Uncomment this to run on GPU
 
-# dataset = StanDogs(root=DATA_PATH,
-#                          train=True,
-#                          cropped=False,
-#                          transform=input_transforms,
-#                          download=True)
+dataset = StanDogs(root=DATA_PATH,
+                         train=True,
+                         cropped=False,
+                         transform=input_transforms,
+                         download=True)
 
-# dataset = StanDogs(root=DATA_PATH,
-#                          train=False,
-#                          cropped=False,
-#                          transform=input_transforms,
-#                          download=True)
+dataset = StanDogs(root=DATA_PATH,
+                         train=False,
+                         cropped=False,
+                         transform=input_transforms,
+                         download=True)
 
 # test_dataset = torchvision.datasets.Omniglot(root=DATA_PATH,
 #                                           transform=transforms.ToTensor(),
 #                                            download=True)
 
-dataset = torchvision.datasets.MNIST(root='data/mnist/',
-                                           train=True,
-                                           transform=transforms.ToTensor(),
-                                           download=True)
-
-test_dataset = torchvision.datasets.MNIST(root='data/mnist/',
-                                          train=False,
-                                          transform=transforms.ToTensor())
+# dataset = torchvision.datasets.MNIST(root='data/mnist/',
+#                                            train=True,
+#                                            transform=transforms.ToTensor(),
+#                                            download=True)
+#
+# test_dataset = torchvision.datasets.MNIST(root='data/mnist/',
+#                                           train=False,
+#                                           transform=transforms.ToTensor())
 #
 # # # Define training data
 # X = dataset.train_data
@@ -100,6 +98,17 @@ test_dataset = torchvision.datasets.MNIST(root='data/mnist/',
 #         reps.append(chunk_reps)
 #     return np.vstack(reps)
 
+def get_inputs(dataset, indexs):
+    inputs = None
+    c = 0
+    for index in indexs:
+        if c == 0:
+            inputs = torch.unsqueeze(dataset[index][0], 0)
+        else:
+            inputs = torch.cat((inputs, torch.unsqueeze(dataset[index][0], 0)), 0)
+        c += 1
+    return inputs
+
 def compute_reps(net, dataset, indexs):
     """Compute representations/embeddings
 
@@ -108,14 +117,8 @@ def compute_reps(net, dataset, indexs):
     :param indexs: the indexs of the samples to pass
     :return: embeddings as a numpy array
     """
-    inputs = None
-    for index in indexs:
-        if index == indexs[0]:
-            inputs = torch.unsqueeze(dataset[index][0], 0)
-        else:
-            inputs = torch.cat((inputs, torch.unsqueeze(dataset[index][0], 0)), 0)
-    # return net(inputs).detach().cpu().numpy()
-    return net(inputs*255).detach().cpu().numpy()  # MNIST only learns when is 0-255 not 0-1
+    return net(get_inputs(dataset, indexs)).detach().cpu().numpy()
+    # return net(inputs*255).detach().cpu().numpy()  # MNIST only learns when is 0-255 not 0-1
 
 def compute_all_reps(net, dataset, chunk_size):
     """Compute representations for entire set in chunks (sequential non-shuffled batches).
@@ -131,7 +134,7 @@ def compute_all_reps(net, dataset, chunk_size):
 
 
 # Define model and training parameters
-emb_dim = 2#1024 #2
+emb_dim = 1024 #2
 n_epochs = 15
 n_iterations = int(ceil(float(len(dataset)) / batch_size))
 n_steps = n_iterations * n_epochs
@@ -139,8 +142,8 @@ cluster_refresh_interval = n_iterations
 
 
 # Model
-net = MNISTEncoder(emb_dim)
-# net = resnet50(pretrained=False)
+# net = MNISTEncoder(emb_dim)
+net = resnet50(pretrained=False, num_classes=emb_dim)
 
 net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
 
@@ -155,8 +158,6 @@ optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
 # Get initial embedding
 initial_reps = compute_all_reps(net, dataset, chunk_size)
 
-# initial_reps = compute_reps(net, X, chunk_size)
-
 y = []
 for i in range(len(dataset)):
     y.append(dataset[i][1])
@@ -166,15 +167,18 @@ y = np.asarray(y)
 batch_builder = ClusterBatchBuilder(y, k, m, d)
 batch_builder.update_clusters(initial_reps)
 
+plot_sample_indexs = random.sample(range(len(dataset)), n_plot)
+
 batch_losses = []
 for e in range(n_epochs):
     print("======= epoch %d =======" % (e+1))
     for i in range(n_iterations):
-
+        print('-----')
         # Sample batch and do forward-backward
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
-        inputs = dataset.train_data[batch_example_inds].float().cuda()
-        # inputs = dataset[batch_example_inds].cuda()
+        # inputs = dataset.train_data[batch_example_inds].float().cuda()
+
+        inputs = get_inputs(dataset, batch_example_inds).cuda()
         labels = torch.from_numpy(batch_class_inds).cuda()
 
         outputs = net(inputs)
@@ -194,7 +198,8 @@ for e in range(n_epochs):
         if not i % 100:
             print(i, batch_loss)
 
-    plot_embedding(compute_reps(net, dataset, list(range(400))), y[:n_plot], savepath="%semb-e%d.pdf"%(plots_path,e+1))
+    # plot_embedding(compute_reps(net, dataset, plot_sample_indexs), y[plot_sample_indexs], savepath="%semb-e%d.pdf"%(plots_path,e+1))
+    graph(compute_reps(net, dataset, plot_sample_indexs), y[plot_sample_indexs], savepath="%semb-e%d.pdf"%(plots_path,e+1))
 
     print('Refreshing clusters')
     reps = compute_all_reps(net, dataset, chunk_size)
@@ -205,5 +210,7 @@ final_reps = compute_all_reps(net, dataset, chunk_size)
 
 # Plot curves and graphs
 plot_smooth(batch_losses, savepath="%sloss.pdf"%(plots_path))
-plot_embedding(initial_reps[:n_plot], y[:n_plot], savepath="%semb-initial.pdf"%(plots_path))
-plot_embedding(final_reps[:n_plot], y[:n_plot], savepath="%semb-final.pdf"%(plots_path))
+# plot_embedding(initial_reps[plot_sample_indexs], y[plot_sample_indexs], savepath="%semb-initial.pdf"%(plots_path))
+# plot_embedding(final_reps[plot_sample_indexs], y[plot_sample_indexs], savepath="%semb-final.pdf"%(plots_path))
+graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs], savepath="%semb-initial.pdf"%(plots_path))
+graph(final_reps[plot_sample_indexs], y[plot_sample_indexs], savepath="%semb-final.pdf"%(plots_path))

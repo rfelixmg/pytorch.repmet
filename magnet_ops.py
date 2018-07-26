@@ -35,7 +35,7 @@ def magnet_loss(r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
 
     # Take cluster means within the batch
     # tf.dynamic_partition used clusters which is just an array we create in minibatch_magnet_loss, so can just reshape
-    cluster_examples = r.view(n_clusters, int(r.shape[0]/n_clusters), r.shape[1])
+    cluster_examples = r.view(n_clusters, int(float(r.shape[0])/float(n_clusters)), r.shape[1])
     cluster_means = cluster_examples.mean(1)
 
     # Compute squared distance of each example to each cluster centroid
