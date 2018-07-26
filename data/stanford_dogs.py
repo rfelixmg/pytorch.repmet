@@ -125,5 +125,5 @@ class StanDogs(data.Dataset):
             labels = scipy.io.loadmat(join(self.root, 'test_list.mat'))['labels']
 
         split = [item[0][0] for item in split]
-        labels = [item[0] for item in labels]
+        labels = [item[0]-1 for item in labels]
         return list(zip(split, labels))

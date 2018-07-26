@@ -45,10 +45,14 @@ def moving_average(a, n=3):
     return ret[n - 1:] / n
 
 
-def plot_smooth(history):
+def plot_smooth(history, savepath=None):
+    plt.clf()
     plt.plot(history, 'c', moving_average(history, 20), 'b')
-    plt.show()
-
+    if savepath:
+        plt.savefig(savepath)
+    else:
+        plt.show()
+    plt.clf()
 
 def show_images(H):
     # make a square grid
@@ -67,7 +71,7 @@ def show_images(H):
         grid[j].axis('off')
 
 
-def plot_embedding(X, y, imgs=None, title=None):
+def plot_embedding(X, y, imgs=None, title=None, savepath=None):
     # Adapted from http://scikit-learn.org/stable/auto_examples/manifold/plot_lle_digits.html
     x_min, x_max = np.min(X, 0), np.max(X, 0)
     X = (X - x_min) / (x_max - x_min)
@@ -99,8 +103,11 @@ def plot_embedding(X, y, imgs=None, title=None):
     if title is not None:
         plt.title(title)
 
-    plt.show()
-
+    if savepath:
+        plt.savefig(savepath)
+    else:
+        plt.show()
+    plt.clf()
 
 def zip_chain(a, b):
     return list(chain(*zip(a, b)))
