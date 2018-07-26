@@ -48,7 +48,7 @@ dataset = StanDogs(root=DATA_PATH,
                          transform=input_transforms,
                          download=True)
 
-dataset = StanDogs(root=DATA_PATH,
+test_dataset = StanDogs(root=DATA_PATH,
                          train=False,
                          cropped=False,
                          transform=input_transforms,
@@ -173,7 +173,6 @@ batch_losses = []
 for e in range(n_epochs):
     print("======= epoch %d =======" % (e+1))
     for i in range(n_iterations):
-        print('-----')
         # Sample batch and do forward-backward
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
         # inputs = dataset.train_data[batch_example_inds].float().cuda()
