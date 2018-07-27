@@ -127,3 +127,16 @@ class StanDogs(data.Dataset):
         split = [item[0][0] for item in split]
         labels = [item[0]-1 for item in labels]
         return list(zip(split, labels))
+
+    def stats(self):
+        counts = {}
+        for index in range(len(self._flat_breed_images)):
+            image_name, target_class = self._flat_breed_images[index]
+            if target_class not in counts.keys():
+                counts[target_class] = 1
+            else:
+                counts[target_class] += 1
+
+        print("%d samples spanning %d classes (avg %f per class)"%(len(self._flat_breed_images), len(counts.keys()), float(len(self._flat_breed_images))/float(len(counts.keys()))))
+
+        return counts

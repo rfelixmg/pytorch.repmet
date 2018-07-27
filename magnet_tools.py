@@ -13,7 +13,8 @@ class ClusterBatchBuilder(object):
     """Sample minibatches for magnet loss."""
     def __init__(self, labels, k, m, d):
 
-        self.num_classes = np.unique(labels).shape[0]
+        self.unique_classes = np.unique(labels)
+        self.num_classes = self.unique_classes.shape[0]
         self.labels = labels
 
         self.k = k
@@ -41,10 +42,10 @@ class ClusterBatchBuilder(object):
 
         for c in range(self.num_classes):  # Changed this to index from 1
 
-            class_mask = self.labels == c
-            class_examples = rep_data[class_mask]
+            class_mask = self.labels == self.unique_classes[c]  # build true/false mask for classes to allow us to extract them
+            class_examples = rep_data[class_mask]  # extract the embds for this class
             kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
-            kmeans.fit(class_examples)
+            kmeans.fit(class_examples)  # run kmeans putting k clusters per class
 
             # Save cluster centroids for finding impostor clusters
             start = self.get_cluster_ind(c, 0)
