@@ -40,7 +40,7 @@ class ClusterBatchBuilder(object):
         if self.centroids is None:
             self.centroids = np.zeros([self.num_classes * self.k, rep_data.shape[1]])
 
-        for c in range(self.num_classes):  # Changed this to index from 1
+        for c in range(self.num_classes):
 
             class_mask = self.labels == self.unique_classes[c]  # build true/false mask for classes to allow us to extract them
             class_examples = rep_data[class_mask]  # extract the embds for this class
@@ -149,3 +149,21 @@ class ClusterBatchBuilder(object):
         """
         return c / self.k
 
+    def predict(self, rep_data):
+        sc = self.centroids - np.expand_dims(rep_data, 1)
+        sc = sc * sc
+        sc = sc.sum(2)
+
+        preds = np.argmin(sc, 1)  # calc closest clusters
+
+        # at this point the preds are the cluster indexs, so need to get classes
+        for p in range(len(preds)):
+            preds[p] = self.cluster_classes[preds[p]]  # first change to cluster index
+            preds[p] = self.unique_classes[preds[p]]  # then convert into the actual class label
+        return preds
+
+    def calc_accuracy(self, rep_data, y):
+        preds = self.predict(rep_data)
+        correct = preds == y
+        acc = correct.astype(float).mean()
+        return acc

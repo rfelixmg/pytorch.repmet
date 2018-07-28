@@ -27,6 +27,7 @@ def magnet_loss(r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
     Returns:
         total_loss: The total magnet loss for the batch.
         losses: The loss for each example in the batch.
+        acc: The predictive accuracy of the batch
     """
     # Helper to compute boolean mask for distance comparisons
     def comparison_mask(a_labels, b_labels):
@@ -66,7 +67,10 @@ def magnet_loss(r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
     losses = F.relu(-torch.log(numerator / (denominator + epsilon) + epsilon))
     total_loss = losses.mean()
 
-    return total_loss, losses
+    _, preds = sample_costs.min(1)
+    acc = torch.eq(classes, preds).float().mean()
+
+    return total_loss, losses, acc
 
 
 def minibatch_magnet_loss(r, classes, m, d, alpha=1.0):
@@ -98,3 +102,4 @@ def minibatch_magnet_loss(r, classes, m, d, alpha=1.0):
     cluster_classes = classes.view(m, d)[:, 0]
     
     return magnet_loss(r, classes, clusters, cluster_classes, m, alpha)
+

@@ -46,9 +46,29 @@ def moving_average(a, n=3):
     return ret[n - 1:] / n
 
 
-def plot_smooth(history, savepath=None):
+def plot_smooth(history_dict, savepath=None):
     plt.clf()
-    plt.plot(history, 'c', moving_average(history, 20), 'b')
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    for k, v in history_dict.items():
+        if k == 'loss':
+            ax1.plot(v, 'c', alpha=0.5)
+            ax1.plot(moving_average(v, 20), 'b')
+        elif k == 'train acc':
+            ax2.plot(v, 'lightsalmon', alpha=0.5)
+            ax2.plot(moving_average(v, 20), 'r')
+        elif k == 'test acc':
+            ax2.plot(v, 'palegreen', alpha=0.5)
+            ax2.plot(moving_average(v, 20), 'g')
+
+    ax1.set_xlabel('Iteration')
+    ax1.set_ylabel('Loss')
+    ax1.tick_params('y')
+    ax2.set_ylabel('Acc')
+    ax2.tick_params('y')
+
+    fig.tight_layout()
+
     if savepath:
         plt.savefig(savepath)
     else:
@@ -110,7 +130,13 @@ def plot_embedding(X, y, imgs=None, title=None, savepath=None):
         plt.show()
     plt.clf()
 
-def graph(vectors, labels, savepath=None):
+def graph(vectors, labels, cluster_centers=None, cluster_classes=None, savepath=None):
+
+    if cluster_centers is not None:
+        vectors = np.vstack((vectors, cluster_centers))
+        labels = np.hstack((labels, cluster_classes))
+    else:
+        cluster_classes = []
 
     if vectors.shape[1] > 2:
         try:
@@ -121,11 +147,23 @@ def graph(vectors, labels, savepath=None):
 
     # plt.figure(figsize=(6, 5))
     plt.figure()
-    colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', 'w', 'orange', 'purple']
+    colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', 'gray', 'orange', 'purple']
 
     clss = list(set(labels))
     for i in range(len(labels)):
-        plt.scatter(vectors[i, 0], vectors[i, 1], facecolors='none', edgecolors=colors[clss.index(labels[i])%len(colors)], label=labels[i])
+        if i < (len(vectors)-len(cluster_classes)):
+            plt.scatter(vectors[i, 0],
+                        vectors[i, 1],
+                        s=10,
+                        facecolors='none',
+                        edgecolors=colors[clss.index(labels[i]) % len(colors)],
+                        label=labels[i])
+        else:
+            plt.scatter(vectors[i, 0],
+                        vectors[i, 1],
+                        marker='x',
+                        c=colors[clss.index(labels[i])%len(colors)],
+                        label=labels[i])
 
     if savepath:
         plt.savefig(savepath)

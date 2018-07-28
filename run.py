@@ -32,7 +32,7 @@ alpha = 1.0
 batch_size = m * d
 
 chunk_size = 32#128
-n_plot_samples = 3 # samples per class to plot
+n_plot_samples = 15 # samples per class to plot
 n_plot_classes = 10
 
 input_transforms = transforms.Compose([
@@ -175,15 +175,33 @@ for i in range(len(dataset)):
     y.append(dataset[i][1])
 y = np.asarray(y)
 
+test_labels = []
+for i in range(len(test_dataset)):
+    test_labels.append(test_dataset[i][1])
+test_labels = np.asarray(test_labels)
+
 # Create batcher
 batch_builder = ClusterBatchBuilder(y, k, m, d)
 batch_builder.update_clusters(initial_reps)
 
 plot_sample_indexs = []
-t=set(y)
+t = set(y)
 plot_classes = random.sample(set(y), n_plot_classes)
 for pc in plot_classes:
-    plot_sample_indexs+=random.sample(set(np.arange(len(y))[y==pc]), n_plot_samples)
+    plot_sample_indexs += random.sample(set(np.arange(len(y))[y==pc]), n_plot_samples)
+
+
+# plot_embedding(compute_reps(net, dataset, plot_sample_indexs), y[plot_sample_indexs], savepath="%semb-e%d.pdf"%(plots_path,e+1))
+cluster_classes = batch_builder.cluster_classes
+
+#use this to get indexs (indx to match cluster classes) for class ids (plot_classes) that we are plotting
+for i in range(len(cluster_classes)):
+    cluster_classes[i] = batch_builder.unique_classes[cluster_classes[i]]
+graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs],
+      cluster_centers=batch_builder.centroids,
+      cluster_classes=batch_builder.cluster_classes,
+      savepath="%semb-initial.png" % plots_path)
+
 
 # print("Training set stats:")
 # dataset.stats()
@@ -191,9 +209,13 @@ for pc in plot_classes:
 # test_dataset.stats()
 
 batch_losses = []
+batch_accs = []
+test_accs = []
+test_acc = 0
 for e in range(n_epochs):
     print("======= epoch %d =======" % (e+1))
-    for i in tqdm(range(n_iterations)):
+    # for i in tqdm(range(n_iterations)):
+    for i in range(n_iterations):
         # Sample batch and do forward-backward
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
         # inputs = dataset.train_data[batch_example_inds].float().cuda()
@@ -202,7 +224,7 @@ for e in range(n_epochs):
         labels = torch.from_numpy(batch_class_inds).cuda()
 
         outputs = net(inputs)
-        batch_loss, batch_example_losses = minibatch_magnet_loss(outputs, labels, m, d, alpha)
+        batch_loss, batch_example_losses, batch_acc = minibatch_magnet_loss(outputs, labels, m, d, alpha)
 
         optimizer.zero_grad()
         batch_loss.backward()
@@ -215,31 +237,40 @@ for e in range(n_epochs):
         batch_builder.update_losses(batch_example_inds, batch_example_losses)
 
         batch_losses.append(batch_loss)
+        batch_accs.append(batch_acc)
+        test_accs.append(test_acc)
         if not i % 50:
-            print(i, batch_loss)
+            # calc test acc
+            test_reps = compute_all_reps(net, test_dataset, chunk_size)
+            test_acc = batch_builder.calc_accuracy(test_reps, test_labels)
 
-    # plot_embedding(compute_reps(net, dataset, plot_sample_indexs), y[plot_sample_indexs], savepath="%semb-e%d.pdf"%(plots_path,e+1))
-    a = compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size)
-    b = y[plot_sample_indexs]
-    c = batch_builder.centroids
-    d = batch_builder.cluster_classes
-    e = batch_builder.unique_classes #TODO use this to get indexs (indx to match cluster classes) for class ids (plot_classes) that we are plotting
-    graph(compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size),
-          y[plot_sample_indexs],
-          # cluster_centers=batch_builder.centroids,
-          # cluster_classes=batch_builder.cluster_classes,
-          savepath="%semb-e%d.png"%(plots_path, e+1))
+            print("Iteration %03d/%03d: Tr. L: %0.3f :: Tr. A: %0.3f :::: Te. A: %0.3f" % (i, n_iterations, batch_loss, batch_acc, test_acc))
 
     print('Refreshing clusters')
     reps = compute_all_reps(net, dataset, chunk_size)
     batch_builder.update_clusters(reps)
 
+    # plot_embedding(compute_reps(net, dataset, plot_sample_indexs), y[plot_sample_indexs], savepath="%semb-e%d.pdf"%(plots_path,e+1))
+    cluster_classes = batch_builder.cluster_classes
+
+    #use this to get indexs (indx to match cluster classes) for class ids (plot_classes) that we are plotting
+    for i in range(len(cluster_classes)):
+        cluster_classes[i] = batch_builder.unique_classes[cluster_classes[i]]
+
+    graph(compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size),
+          y[plot_sample_indexs],
+          cluster_centers=batch_builder.centroids,
+          cluster_classes=batch_builder.cluster_classes,
+          savepath="%semb-e%d.png"%(plots_path, e+1))
 
 final_reps = compute_all_reps(net, dataset, chunk_size)
 
 # Plot curves and graphs
-plot_smooth(batch_losses, savepath="%sloss.png"%(plots_path))
+plot_smooth({'loss':batch_losses,
+             'train acc':batch_accs,
+             'test acc':test_accs},
+            savepath="%sloss.png"%(plots_path))
+
 # plot_embedding(initial_reps[plot_sample_indexs], y[plot_sample_indexs], savepath="%semb-initial.pdf"%(plots_path))
 # plot_embedding(final_reps[plot_sample_indexs], y[plot_sample_indexs], savepath="%semb-final.pdf"%(plots_path))
-graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs], savepath="%semb-initial.png"%(plots_path))
 graph(final_reps[plot_sample_indexs], y[plot_sample_indexs], savepath="%semb-final.png"%(plots_path))
