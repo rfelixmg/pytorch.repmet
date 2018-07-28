@@ -184,12 +184,17 @@ test_labels = np.asarray(test_labels)
 batch_builder = ClusterBatchBuilder(y, k, m, d)
 batch_builder.update_clusters(initial_reps)
 
+# Randomly sample the classes then the samples from each class to plot
 plot_sample_indexs = []
-t = set(y)
 plot_classes = random.sample(set(y), n_plot_classes)
 for pc in plot_classes:
     plot_sample_indexs += random.sample(set(np.arange(len(y))[y==pc]), n_plot_samples)
 
+# Randomly sample the classes then the samples from each class to plot (test set)
+plot_test_sample_indexs = []
+plot_test_classes = random.sample(set(test_labels), n_plot_classes)
+for pc in plot_test_classes:
+    plot_test_sample_indexs += random.sample(set(np.arange(len(test_labels))[test_labels==pc]), n_plot_samples)
 
 # plot_embedding(compute_reps(net, dataset, plot_sample_indexs), y[plot_sample_indexs], savepath="%semb-e%d.pdf"%(plots_path,e+1))
 cluster_classes = batch_builder.cluster_classes
@@ -262,6 +267,12 @@ for e in range(n_epochs):
           cluster_centers=batch_builder.centroids,
           cluster_classes=batch_builder.cluster_classes,
           savepath="%semb-e%d.png"%(plots_path, e+1))
+
+    graph(compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size),
+          test_labels[plot_test_sample_indexs],
+          cluster_centers=batch_builder.centroids,
+          cluster_classes=batch_builder.cluster_classes,
+          savepath="%stest_emb-e%d.png"%(plots_path, e+1))
 
 final_reps = compute_all_reps(net, dataset, chunk_size)
 
