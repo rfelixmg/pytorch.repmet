@@ -6,6 +6,7 @@ https://github.com/pumpikano/tf-magnet-loss
 
 # import tensorflow as tf
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 from matplotlib import offsetbox
 from mpl_toolkits.axes_grid1 import ImageGrid
@@ -190,6 +191,12 @@ def plot_metric(*args, **kwargs):
         plt.title(kwargs['title'])
     plt.show()
 
+def get_plot_indexs(labels, n_classes, n_samples):
+    plot_sample_indexs = []
+    plot_classes = random.sample(set(labels), n_classes)
+    for pc in plot_classes:
+        plot_sample_indexs += random.sample(set(np.arange(len(labels))[labels==pc]), n_samples)
+    return plot_sample_indexs
 
 # Evaluation
 
@@ -230,3 +237,4 @@ def unsupervised_clustering_accuracy(emb, labels):
     for (cluster, best) in A:
         acc -= G[cluster, best]
     return acc / float(len(labels))
+
