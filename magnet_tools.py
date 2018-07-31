@@ -7,7 +7,8 @@ https://github.com/pumpikano/tf-magnet-loss
 from math import ceil
 import numpy as np
 from sklearn.cluster import KMeans
-
+import torch
+from magnet_ops import magnet_dist
 
 class ClusterBatchBuilder(object):
     """Sample minibatches for magnet loss."""
@@ -150,9 +151,11 @@ class ClusterBatchBuilder(object):
         return c / self.k
 
     def predict(self, rep_data):
-        sc = self.centroids - np.expand_dims(rep_data, 1)
-        sc = sc * sc
-        sc = sc.sum(2)
+        # sc = self.centroids - np.expand_dims(rep_data, 1)
+        # sc = sc * sc
+        # sc = sc.sum(2)
+
+        sc = magnet_dist(torch.from_numpy(self.centroids).float().cuda(), torch.from_numpy(rep_data).float().cuda()).detach().cpu().numpy()
 
         preds = np.argmin(sc, 1)  # calc closest clusters
 

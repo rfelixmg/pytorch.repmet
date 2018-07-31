@@ -223,6 +223,13 @@ def compute_rand_index(emb, labels):
 
 
 def unsupervised_clustering_accuracy(emb, labels):
+    """
+    Calcs acc for set of embeddings but redoes kmeans for the number of classes in labels rather than the learnt clusters
+    :param emb:
+    :param labels:
+    :return:
+    """
+
     k = np.unique(labels).size
     kmeans = KMeans(n_clusters=k, max_iter=35, n_init=15, n_jobs=-1).fit(emb)
     emb_labels = kmeans.labels_

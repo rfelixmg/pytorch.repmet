@@ -5,7 +5,6 @@ import os
 import torch.backends.cudnn as cudnn
 import torchvision
 import torchvision.transforms as transforms
-from torchvision.models.resnet import resnet50
 
 import configs
 from data.stanford_dogs import StanDogs
@@ -15,14 +14,15 @@ from magnet_ops import *
 from magnet_tools import *
 from models.configs import model_params
 from models.mnist import MNISTEncoder
+from models.standogs import SDEncoder
 from utils import *
 
 assert torch.cuda.is_available(), 'Error: CUDA not found!'
 
-DATASET = 'MNIST'
-MODEL_ID = '001'
-# DATASET = 'STANDOGS'
-# MODEL_ID = '002'
+# DATASET = 'MNIST'
+# MODEL_ID = '001'
+DATASET = 'STANDOGS'
+MODEL_ID = '002'
 
 if DATASET == 'MNIST':
 
@@ -55,7 +55,12 @@ elif DATASET == 'STANDOGS':
                             transform=input_transforms,
                             download=True)
 
-    net = resnet50(pretrained=False, num_classes=model_params.emb_dim[MODEL_ID])
+    print("Training set stats:")
+    dataset.stats()
+    print("Testing set stats:")
+    test_dataset.stats()
+
+    net = SDEncoder(model_params.emb_dim[MODEL_ID])
 
 plots_path = os.path.join(configs.general.paths.graphing, "%s" % (MODEL_ID))
 os.makedirs(plots_path, exist_ok=True)
@@ -73,7 +78,7 @@ batch_size = m * d
 
 chunk_size = 32#128
 n_plot_samples = 15 # samples per class to plot
-n_plot_classes = 10
+n_plot_classes = 5
 
 n_epochs = 15
 n_iterations = int(ceil(float(len(dataset)) / batch_size))
@@ -125,12 +130,6 @@ graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs],
       cluster_classes=batch_builder.cluster_classes,
       savepath="%s/emb-initial%s" % (plots_path, plots_ext))
 
-
-# print("Training set stats:")
-# dataset.stats()
-# print("Testing set stats:")
-# test_dataset.stats()
-
 # Lets setup the training loop
 batch_losses = []
 batch_accs = []
@@ -167,12 +166,13 @@ for e in range(n_epochs):
         batch_losses.append(batch_loss)
         batch_accs.append(batch_acc)
         test_accs.append(test_acc)
-        if not i % 50:
+        if not i % int(n_iterations*.05):
             # calc test acc
             test_reps = compute_all_reps(net, test_dataset, chunk_size)
-            test_acc = batch_builder.calc_accuracy(test_reps, test_labels)
+            test_accb = unsupervised_clustering_accuracy(test_reps, test_labels)
+            test_acc = test_accb # batch_builder.calc_accuracy(test_reps, test_labels)
 
-            print("Iteration %03d/%03d: Tr. L: %0.3f :: Tr. A: %0.3f :::: Te. A: %0.3f" % (i, n_iterations, batch_loss, batch_acc, test_acc))
+            print("Iteration %03d/%03d: Tr. L: %0.3f :: Tr. A: %0.3f :::: Te. A: %0.3f :: Te. A2: %0.3f" % (i, n_iterations, batch_loss, batch_acc, test_acc, test_accb))
 
     print('Refreshing clusters')
     reps = compute_all_reps(net, dataset, chunk_size)
@@ -195,6 +195,11 @@ for e in range(n_epochs):
           cluster_centers=batch_builder.centroids,
           cluster_classes=batch_builder.cluster_classes,
           savepath="%s/test_emb-e%d%s" % (plots_path, e+1, plots_ext))
+
+    plot_smooth({'loss': batch_losses,
+                 'train acc': batch_accs,
+                 'test acc': test_accs},
+                savepath="%s/loss%s" % (plots_path, plots_ext))
 
 final_reps = compute_all_reps(net, dataset, chunk_size)
 

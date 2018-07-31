@@ -39,10 +39,8 @@ def magnet_loss(r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
     cluster_examples = r.view(n_clusters, int(float(r.shape[0])/float(n_clusters)), r.shape[1])
     cluster_means = cluster_examples.mean(1)
 
-    # Compute squared distance of each example to each cluster centroid
-    sample_costs = cluster_means - r.unsqueeze(1)
-    sample_costs = sample_costs * sample_costs
-    sample_costs = sample_costs.sum(2)
+    # Compute squared distance of each example to each cluster centroid (euclid without the root)
+    sample_costs = magnet_dist(cluster_means, r)
 
     # Select distances of examples to their own centroid
     intra_cluster_mask = comparison_mask(clusters, torch.arange(n_clusters)).float()
@@ -103,3 +101,25 @@ def minibatch_magnet_loss(r, classes, m, d, alpha=1.0):
     
     return magnet_loss(r, classes, clusters, cluster_classes, m, alpha)
 
+
+def magnet_dist(means, reps):
+
+    sample_costs = means - reps.unsqueeze(1)
+    sample_costs = sample_costs * sample_costs
+    sample_costs = sample_costs.sum(2)
+    return sample_costs
+
+
+def euclidean_dist(x, y):
+    # This is actually equivalent to the magnet dist
+    # x: N x D
+    # y: M x D
+    n = x.size(0)
+    m = y.size(0)
+    d = x.size(1)
+    assert d == y.size(1)
+
+    x = x.unsqueeze(1).expand(n, m, d)
+    y = y.unsqueeze(0).expand(n, m, d)
+
+    return torch.pow(x - y, 2).sum(2).t()
