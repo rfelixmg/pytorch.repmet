@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 
 import configs
 from data.stanford_dogs import StanDogs
+from data.oxford_flowers import OxFlowers
 from data.utils import get_inputs
 from models.utils import compute_all_reps, compute_reps
 from magnet_ops import *
@@ -19,10 +20,12 @@ from utils import *
 
 assert torch.cuda.is_available(), 'Error: CUDA not found!'
 
-# DATASET = 'MNIST'
-# MODEL_ID = '001'
-DATASET = 'STANDOGS'
-MODEL_ID = '002'
+DATASET = 'MNIST'
+MODEL_ID = '001'
+# DATASET = 'STANDOGS'
+# MODEL_ID = '002'
+# DATASET = 'OXFLOWERS'
+# MODEL_ID = '003'
 
 if DATASET == 'MNIST':
 
@@ -61,6 +64,30 @@ elif DATASET == 'STANDOGS':
     test_dataset.stats()
 
     net = SDEncoder(model_params.emb_dim[MODEL_ID])
+elif DATASET == 'OXFLOWERS':
+
+    input_transforms = transforms.Compose([
+        transforms.RandomResizedCrop(224, ratio=(1, 1.3333)),
+        transforms.ToTensor()])
+
+    dataset = OxFlowers(root=configs.general.paths.imagesets,
+                       train=True,
+                       val=False,
+                       transform=input_transforms,
+                       download=True)
+
+    test_dataset = OxFlowers(root=configs.general.paths.imagesets,
+                            train=False,
+                            val=True,
+                            transform=input_transforms,
+                            download=True)
+
+    print("Training set stats:")
+    dataset.stats()
+    print("Testing set stats:")
+    test_dataset.stats()
+
+    net = SDEncoder(model_params.emb_dim[MODEL_ID])
 
 plots_path = os.path.join(configs.general.paths.graphing, "%s" % (MODEL_ID))
 os.makedirs(plots_path, exist_ok=True)
@@ -77,10 +104,10 @@ alpha = model_params.alpha[MODEL_ID]
 batch_size = m * d
 
 chunk_size = 32#128
-n_plot_samples = 15 # samples per class to plot
-n_plot_classes = 5
+n_plot_samples = 10 # samples per class to plot
+n_plot_classes = 10
 
-n_epochs = 15
+n_epochs = 30
 n_iterations = int(ceil(float(len(dataset)) / batch_size))
 n_steps = n_iterations * n_epochs
 cluster_refresh_interval = n_iterations
@@ -92,7 +119,8 @@ net.cuda()
 cudnn.benchmark = True
 
 # Loss
-optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
+optimizer = torch.optim.Adam(net.parameters(), lr=model_params.lr[MODEL_ID])
+# optimizer = torch.optim.SGD(net.parameters(), lr=model_params.lr[MODEL_ID], momentum=0.9)
 
 # Get initial embedding
 initial_reps = compute_all_reps(net, dataset, chunk_size)
@@ -114,8 +142,8 @@ batch_builder = ClusterBatchBuilder(y, k, m, d)
 batch_builder.update_clusters(initial_reps)
 
 # Randomly sample the classes then the samples from each class to plot
-plot_sample_indexs = get_plot_indexs(y, n_plot_classes, n_plot_samples)
-plot_test_sample_indexs = get_plot_indexs(test_labels, n_plot_classes, n_plot_samples)
+plot_sample_indexs, plot_classes = get_plot_indexs(y, n_plot_classes, n_plot_samples)
+plot_test_sample_indexs, plot_test_classes = get_plot_indexs(test_labels, n_plot_classes, n_plot_samples, plot_classes=plot_classes)
 
 # lets plot the initial embeddings
 cluster_classes = batch_builder.cluster_classes
@@ -124,10 +152,15 @@ cluster_classes = batch_builder.cluster_classes
 for i in range(len(cluster_classes)):
     cluster_classes[i] = batch_builder.unique_classes[cluster_classes[i]]
 
+cls_inds = []
+for i in range(len(batch_builder.cluster_classes)):
+    if batch_builder.cluster_classes[i] in plot_classes:
+        cls_inds.append(i)
+
 # plot it
 graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs],
-      cluster_centers=batch_builder.centroids,
-      cluster_classes=batch_builder.cluster_classes,
+      cluster_centers=batch_builder.centroids[cls_inds],
+      cluster_classes=batch_builder.cluster_classes[cls_inds],
       savepath="%s/emb-initial%s" % (plots_path, plots_ext))
 
 # Lets setup the training loop
@@ -186,15 +219,27 @@ for e in range(n_epochs):
 
     graph(compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size),
           y[plot_sample_indexs],
+          cluster_centers=batch_builder.centroids[cls_inds],
+          cluster_classes=batch_builder.cluster_classes[cls_inds],
+          savepath="%s/emb-e%d%s" % (plots_path, e+1, plots_ext))
+
+    graph(compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size),
+          test_labels[plot_test_sample_indexs],
+          cluster_centers=batch_builder.centroids[cls_inds],
+          cluster_classes=batch_builder.cluster_classes[cls_inds],
+          savepath="%s/test_emb-e%d%s" % (plots_path, e+1, plots_ext))
+
+    graph(compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size),
+          y[plot_sample_indexs],
           cluster_centers=batch_builder.centroids,
           cluster_classes=batch_builder.cluster_classes,
-          savepath="%s/emb-e%d%s" % (plots_path, e+1, plots_ext))
+          savepath="%s/emb-e%d_all%s" % (plots_path, e+1, plots_ext))
 
     graph(compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size),
           test_labels[plot_test_sample_indexs],
           cluster_centers=batch_builder.centroids,
           cluster_classes=batch_builder.cluster_classes,
-          savepath="%s/test_emb-e%d%s" % (plots_path, e+1, plots_ext))
+          savepath="%s/test_emb-e%d_all%s" % (plots_path, e+1, plots_ext))
 
     plot_smooth({'loss': batch_losses,
                  'train acc': batch_accs,

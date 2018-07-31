@@ -191,12 +191,19 @@ def plot_metric(*args, **kwargs):
         plt.title(kwargs['title'])
     plt.show()
 
-def get_plot_indexs(labels, n_classes, n_samples):
+def get_plot_indexs(labels, n_classes, n_samples, plot_classes=None):
     plot_sample_indexs = []
-    plot_classes = random.sample(set(labels), n_classes)
+    if not plot_classes:
+        plot_classes = random.sample(set(labels), n_classes)
+
     for pc in plot_classes:
-        plot_sample_indexs += random.sample(set(np.arange(len(labels))[labels==pc]), n_samples)
-    return plot_sample_indexs
+        indexs = set(np.arange(len(labels))[labels == pc])
+        added = 0
+        for l in range(int(n_samples/len(indexs))):  # if we want more samples than we actually have available
+            plot_sample_indexs += indexs
+            added += len(indexs)
+        plot_sample_indexs += random.sample(indexs, n_samples-added)
+    return plot_sample_indexs, plot_classes
 
 # Evaluation
 

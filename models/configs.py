@@ -6,16 +6,28 @@ from easydict import EasyDict as edict
 model_params = edict()
 
 model_params.emb_dim = {'001': 2,
-                        '002': 1024}
+                        '002': 64,
+                        '003': 32}
 
+# m = num clusters per minibatch
 model_params.m = {'001': 8,
-                  '002': 12}
+                  '002': 12,
+                  '003': 12}
 
+# d = num of samples retrieved per cluster
 model_params.d = {'001': 8,
-                  '002': 4}
+                  '002': 4,
+                  '003': 4}
 
+# k = num of modes per class
 model_params.k = {'001': 3,
-                  '002': 3}
+                  '002': 1,
+                  '003': 1}
 
 model_params.alpha = {'001': 1.0,
-                      '002': 1.0}
+                      '002': 0.71,
+                      '003': 2.43}
+
+model_params.lr = {'001': 1e-4,
+                   '002': 0.00292,
+                   '003': 0.024}
