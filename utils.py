@@ -76,6 +76,23 @@ def plot_smooth(history_dict, savepath=None):
         plt.show()
     plt.clf()
 
+
+def plot_cluster_loss(losses, classes, savepath=None):
+    plt.clf()
+    y_pos = np.arange(len(classes))
+
+    plt.bar(y_pos, losses, align='center', alpha=0.5)
+    plt.xticks(y_pos, classes)
+    plt.ylabel('Loss')
+    plt.title('Cluster Losses')
+
+    if savepath:
+        plt.savefig(savepath)
+    else:
+        plt.show()
+    plt.clf()
+
+
 def show_images(H):
     # make a square grid
     num = H.shape[0]
@@ -191,19 +208,20 @@ def plot_metric(*args, **kwargs):
         plt.title(kwargs['title'])
     plt.show()
 
-def get_plot_indexs(labels, n_classes, n_samples, plot_classes=None):
-    plot_sample_indexs = []
-    if not plot_classes:
-        plot_classes = random.sample(set(labels), n_classes)
+def get_indexs(labels, n_classes, n_samples, class_ids=None):
+    sample_indexs = []
+    if not class_ids:
+        class_ids = random.sample(set(labels), n_classes)
 
-    for pc in plot_classes:
+    for pc in class_ids:
         indexs = set(np.arange(len(labels))[labels == pc])
         added = 0
         for l in range(int(n_samples/len(indexs))):  # if we want more samples than we actually have available
-            plot_sample_indexs += indexs
+            sample_indexs += indexs
             added += len(indexs)
-        plot_sample_indexs += random.sample(indexs, n_samples-added)
-    return plot_sample_indexs, plot_classes
+        sample_indexs += random.sample(indexs, n_samples-added)
+
+    return sample_indexs, class_ids
 
 # Evaluation
 

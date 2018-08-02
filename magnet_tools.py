@@ -74,18 +74,18 @@ class ClusterBatchBuilder(object):
             self.has_loss = np.zeros_like(self.labels, bool)
 
         # Update example losses
-        indexes = np.array(indexes)
-        self.example_losses[indexes] = losses
-        self.has_loss[indexes] = losses
+        indexes = np.array(indexes)  # these are sample indexs in the dataset, relating to the batch this is called on
+        self.example_losses[indexes] = losses  # add loss for each of the examples in the batch
+        self.has_loss[indexes] = losses  # set booleans
 
         # Find affected clusters and update the corresponding cluster losses
-        clusters = np.unique(self.assignments[indexes])
-        for cluster in clusters:
-            cluster_inds = self.assignments == cluster
-            cluster_example_losses = self.example_losses[cluster_inds]
+        clusters = np.unique(self.assignments[indexes])  # what clusters are these batch samples a part of?
+        for cluster in clusters:  # for each cluster
+            cluster_inds = self.assignments == cluster  # what samples are in this cluster?
+            cluster_example_losses = self.example_losses[cluster_inds]  # for the samples in this cluster what are their losses
 
-            # Take the average closs in the cluster of examples for which we have measured a loss
-            self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds]])
+            # Take the average loss in the cluster of examples for which we have measured a loss
+            self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds]])  # set the loss of this cluster of the mean if the losses exist
 
     def gen_batch(self):
         """
@@ -111,11 +111,11 @@ class ClusterBatchBuilder(object):
         # added the int condition as it was returning float and picking up seed_cluster
         sq_dists[int(self.get_class_ind(seed_cluster)) == self.cluster_classes] = np.inf
 
-        # Get top impostor clusters and add seed
+        # Get top m-1 (closest) impostor clusters and add seed cluster too
         clusters = np.argpartition(sq_dists, self.m-1)[:self.m-1]
         clusters = np.concatenate([[seed_cluster], clusters])
 
-        # Sample examples uniformly from cluster
+        # Sample d examples uniformly from m clusters
         batch_indexes = np.empty([self.m * self.d], int)
         for i, c in enumerate(clusters):
             x = np.random.choice(self.cluster_assignments[c], self.d, replace=True)  # if clusters have less than d samples we need to allow repick
@@ -151,6 +151,11 @@ class ClusterBatchBuilder(object):
         return c / self.k
 
     def predict(self, rep_data):
+        """
+        Predict the clusters that rep_data belongs to based on the clusters current positions
+        :param rep_data:
+        :return:
+        """
         # sc = self.centroids - np.expand_dims(rep_data, 1)
         # sc = sc * sc
         # sc = sc.sum(2)
@@ -166,6 +171,12 @@ class ClusterBatchBuilder(object):
         return preds
 
     def calc_accuracy(self, rep_data, y):
+        """
+        Calculate the accuracy of reps based on the current clusters
+        :param rep_data:
+        :param y:
+        :return:
+        """
         preds = self.predict(rep_data)
         correct = preds == y
         acc = correct.astype(float).mean()

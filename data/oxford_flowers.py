@@ -58,8 +58,10 @@ class OxFlowers(data.Dataset):
         Returns:
             tuple: (image, target) where target is index of the target character class.
         """
+        from PIL import ImageFile
+        ImageFile.LOAD_TRUNCATED_IMAGES = True
         image_name, target_class = self.split[index]
-        image_path = join(self.images_folder, "image_%05d.jpg" % image_name)
+        image_path = join(self.images_folder, "image_%05d.jpg" % (image_name+1))
         image = Image.open(image_path).convert('RGB')
 
         if self.transform:
