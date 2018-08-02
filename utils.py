@@ -15,7 +15,7 @@ from sklearn.manifold import TSNE
 from scipy.stats import itemfreq
 from sklearn.cluster import KMeans
 from itertools import chain
-
+from torchvision import transforms
 
 # Model building blocks
 
@@ -77,15 +77,15 @@ def plot_smooth(history_dict, savepath=None):
     plt.clf()
 
 
-def plot_cluster_loss(losses, classes, savepath=None):
+def plot_cluster_data(losses, classes, title="", savepath=None):
     plt.clf()
     y_pos = np.arange(len(classes))
 
-    plt.figure(figsize=(20, 4))
+    plt.figure(figsize=(int(len(classes)*0.25), 4))
     plt.bar(y_pos, losses, align='center', alpha=0.5)
     plt.xticks(y_pos, classes)
-    plt.ylabel('Loss')
-    plt.title('Cluster Losses')
+    # plt.ylabel('Loss')
+    plt.title(title)
 
     if savepath:
         plt.savefig(savepath)
@@ -208,6 +208,17 @@ def plot_metric(*args, **kwargs):
     if kwargs['title']:
         plt.title(kwargs['title'])
     plt.show()
+
+def disp_inputs(input_tensor, labels):
+    if len(input_tensor.shape) > 3:
+        for input in input_tensor[:]:
+            img = transforms.ToPILImage()(input.cpu())
+            plt.imshow(img)
+            plt.show()
+    else:
+        img = input_tensor
+        plt.imshow(img)
+        plt.show()
 
 def get_indexs(labels, n_classes, n_samples, class_ids=None):
     sample_indexs = []

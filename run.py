@@ -22,7 +22,7 @@ assert torch.cuda.is_available(), 'Error: CUDA not found!'
 
 MODEL_ID = '001'
 # MODEL_ID = '002'
-MODEL_ID = '003'
+# MODEL_ID = '003'
 
 DATASET = model_params.dataset[MODEL_ID]
 
@@ -42,7 +42,7 @@ if DATASET == 'MNIST':
 elif DATASET == 'STANDOGS':
 
     input_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(224, ratio=(1, 1.3333)),
+        transforms.RandomResizedCrop(224, ratio=(1, 1.1)),
         transforms.ToTensor()])
 
     dataset = StanDogs(root=configs.general.paths.imagesets,
@@ -66,7 +66,7 @@ elif DATASET == 'STANDOGS':
 elif DATASET == 'OXFLOWERS':
 
     input_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(224, ratio=(1, 1.3333)),
+        transforms.RandomResizedCrop(224, ratio=(1, 1.1)),
         transforms.ToTensor()])
 
     dataset = OxFlowers(root=configs.general.paths.imagesets,
@@ -180,6 +180,7 @@ for e in range(n_epochs):
 
         # Get inputs and and labels from the dataset
         inputs = get_inputs(dataset, batch_example_inds).cuda()
+        # disp_inputs(inputs, y[batch_example_inds])
         labels = torch.from_numpy(batch_class_inds).cuda()
 
         # Calc the outputs (embs) and then the loss + accs
@@ -214,17 +215,23 @@ for e in range(n_epochs):
 
             print("Iteration %03d/%03d: Tr. L: %0.3f :: Batch. A: %0.3f :::: Tr. A: %0.3f :: Tr. A2: %0.3f :::: Te. A: %0.3f :: Te. A2: %0.3f" % (iter, n_iterations, batch_loss, batch_acc, train_acc, train_accb, test_acc, test_accb))
 
-            # lets only get centroids that correspond the classes in this batch
-            batch_cls_inds = []
-            for i in range(len(batch_builder.cluster_classes)):
-                if batch_builder.cluster_classes[i] in y[batch_example_inds]:
-                    batch_cls_inds.append(i)
+            batch_ass_ids = np.unique(batch_builder.assignments[batch_example_inds])
+            t = batch_builder.cluster_classes[batch_ass_ids]
+            tt = batch_builder.centroids[batch_ass_ids]
+
+            os.makedirs("%s/batch/"%plots_path, exist_ok=True)
 
             graph(outputs.detach().cpu().numpy(),
                   y[batch_example_inds],
-                  cluster_centers=batch_builder.centroids[batch_cls_inds],
-                  cluster_classes=batch_builder.cluster_classes[batch_cls_inds],
-                  savepath="%s/batch-emb-e%d-i%d%s" % (plots_path, e + 1, iter, plots_ext))
+                  cluster_centers=batch_builder.centroids[batch_ass_ids],
+                  cluster_classes=batch_builder.cluster_classes[batch_ass_ids],
+                  savepath="%s/batch/emb-e%d-i%d%s" % (plots_path, e + 1, iter, plots_ext))
+
+            graph(outputs.detach().cpu().numpy(),
+                  y[batch_example_inds],
+                  cluster_centers=batch_builder.centroids,
+                  cluster_classes=batch_builder.cluster_classes,
+                  savepath="%s/batch/emb-e%d-i%d-all%s" % (plots_path, e + 1, iter, plots_ext))
 
     print('Refreshing clusters')
     reps = compute_all_reps(net, dataset, chunk_size)
@@ -252,29 +259,31 @@ for e in range(n_epochs):
           y[plot_sample_indexs],
           cluster_centers=batch_builder.centroids,
           cluster_classes=batch_builder.cluster_classes,
-          savepath="%s/emb-e%d_all%s" % (plots_path, e+1, plots_ext))
+          savepath="%s/emb_all-e%d%s" % (plots_path, e+1, plots_ext))
 
     graph(compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size),
           test_labels[plot_test_sample_indexs],
           cluster_centers=batch_builder.centroids,
           cluster_classes=batch_builder.cluster_classes,
-          savepath="%s/test_emb-e%d_all%s" % (plots_path, e+1, plots_ext))
+          savepath="%s/test_emb_all-e%d%s" % (plots_path, e+1, plots_ext))
 
     plot_smooth({'loss': batch_losses,
                  'train acc': batch_accs,
                  'test acc': test_accs},
                 savepath="%s/loss%s" % (plots_path, plots_ext))
 
-    plot_cluster_loss(batch_builder.cluster_losses,
+    plot_cluster_data(batch_builder.cluster_losses,
                       batch_builder.cluster_classes,
+                      title="cluster losses",
                       savepath="%s/cluster_losses-e%d%s" % (plots_path, e+1, plots_ext))
 
     cluster_counts = []
     for c in range(len(batch_builder.cluster_assignments)):
         cluster_counts.append(len(batch_builder.cluster_assignments[c]))
 
-    plot_cluster_loss(cluster_counts,
+    plot_cluster_data(cluster_counts,
                       batch_builder.cluster_classes,
+                      title="cluster counts",
                       savepath="%s/cluster_counts-e%d%s" % (plots_path, e+1, plots_ext))
 
 final_reps = compute_all_reps(net, dataset, chunk_size)
