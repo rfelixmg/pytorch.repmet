@@ -81,6 +81,7 @@ def plot_cluster_loss(losses, classes, savepath=None):
     plt.clf()
     y_pos = np.arange(len(classes))
 
+    plt.figure(figsize=(20, 4))
     plt.bar(y_pos, losses, align='center', alpha=0.5)
     plt.xticks(y_pos, classes)
     plt.ylabel('Loss')

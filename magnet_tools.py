@@ -53,10 +53,10 @@ class ClusterBatchBuilder(object):
             stop = self.get_cluster_ind(c, self.k)
             self.centroids[start:stop] = kmeans.cluster_centers_
 
-            # Update assignments with new global cluster indexes
+            # Update assignments with new global cluster indexes (ie each sample in dataset belongs to cluster id x)
             self.assignments[class_mask] = self.get_cluster_ind(c, kmeans.predict(class_examples))
 
-        # Construct a map from cluster to example indexes for fast batch creation
+        # Construct a map from cluster to example indexes for fast batch creation (the opposite of assignmnets)
         for cluster in range(self.k * self.num_classes):
             cluster_mask = self.assignments == cluster
             self.cluster_assignments[cluster] = np.flatnonzero(cluster_mask)
@@ -85,7 +85,11 @@ class ClusterBatchBuilder(object):
             cluster_example_losses = self.example_losses[cluster_inds]  # for the samples in this cluster what are their losses
 
             # Take the average loss in the cluster of examples for which we have measured a loss
-            self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds]])  # set the loss of this cluster of the mean if the losses exist
+            if len(cluster_example_losses[self.has_loss[cluster_inds]]) > 0:
+                self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds]])  # set the loss of this cluster of the mean if the losses exist
+            else:
+                self.cluster_losses[cluster] = 0
+
 
     def gen_batch(self):
         """
@@ -125,7 +129,8 @@ class ClusterBatchBuilder(object):
             batch_indexes[start:stop] = x
 
         # Translate class indexes to index for classes within the batch
-        class_inds = self.get_class_ind(clusters)
+        # ie. [y1, y7, y56, y21, y89, y21,...] > [0, 1, 2, 3, 4, 3, ...]
+        class_inds = self.cluster_classes[clusters]
         batch_class_inds = []
         inds_map = {}
         class_count = 0

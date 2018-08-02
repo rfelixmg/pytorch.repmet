@@ -121,7 +121,7 @@ cudnn.benchmark = True
 optimizer = torch.optim.Adam(net.parameters(), lr=model_params.lr[MODEL_ID])
 # optimizer = torch.optim.SGD(net.parameters(), lr=model_params.lr[MODEL_ID], momentum=0.9)
 
-# Get initial embedding
+# Get initial embedding using all samples in training set
 initial_reps = compute_all_reps(net, dataset, chunk_size)
 
 # Train labels from dataset (TODO make into a dataset variable / func)
@@ -268,6 +268,14 @@ for e in range(n_epochs):
     plot_cluster_loss(batch_builder.cluster_losses,
                       batch_builder.cluster_classes,
                       savepath="%s/cluster_losses-e%d%s" % (plots_path, e+1, plots_ext))
+
+    cluster_counts = []
+    for c in range(len(batch_builder.cluster_assignments)):
+        cluster_counts.append(len(batch_builder.cluster_assignments[c]))
+
+    plot_cluster_loss(cluster_counts,
+                      batch_builder.cluster_classes,
+                      savepath="%s/cluster_counts-e%d%s" % (plots_path, e+1, plots_ext))
 
 final_reps = compute_all_reps(net, dataset, chunk_size)
 
