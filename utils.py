@@ -15,6 +15,7 @@ from sklearn.manifold import TSNE
 from scipy.stats import itemfreq
 from sklearn.cluster import KMeans
 from itertools import chain
+import torch
 from torchvision import transforms
 
 # Model building blocks
@@ -281,4 +282,19 @@ def unsupervised_clustering_accuracy(emb, labels):
     for (cluster, best) in A:
         acc -= G[cluster, best]
     return acc / float(len(labels))
+
+def ensure_numpy(x):
+    if type(x).__module__ == np.__name__:
+        return x
+    elif type(x).__module__ == torch.__name__:
+        return x.detach().cpu().numpy()
+
+def get_labels(dataset, numpy=True):
+    y = []
+    for i in range(len(dataset)):
+        y.append(dataset[i][1])
+    if numpy:
+        return np.asarray(y)
+    else:
+        return y
 

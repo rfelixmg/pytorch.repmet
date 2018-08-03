@@ -8,10 +8,10 @@ class SDEncoder(nn.Module):
     def __init__(self, emb_dim):
         super(SDEncoder, self).__init__()
 
-        self.backbone = resnet50(pretrained=False, num_classes=1024)
+        self.backbone = resnet50(pretrained=False, num_classes=512)
         # self.backbone = inception_v3(pretrained=True)#, num_classes=emb_dim)
-        self.bn1 = nn.BatchNorm1d(1024)
-        self.fc1 = nn.Linear(1024, emb_dim)
+        self.bn1 = nn.BatchNorm1d(512)
+        self.fc1 = nn.Linear(512, emb_dim)
 
     def forward(self, x, norm=True):
 

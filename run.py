@@ -17,13 +17,14 @@ from models.configs import model_params
 from models.mnist import MNISTEncoder
 from models.standogs import SDEncoder
 from utils import *
-from dml_ops import DMLLoss
+from magnet_loss import MagnetLoss
+from dml_loss import DMLLoss
 
 assert torch.cuda.is_available(), 'Error: CUDA not found!'
 
 MODEL_ID = '001'
 # MODEL_ID = '002'
-MODEL_ID = '003'
+# MODEL_ID = '003'
 
 DATASET = model_params.dataset[MODEL_ID]
 
@@ -109,7 +110,7 @@ n_plot_classes = 10
 
 # although we are doing epochs with n_iter = dataset_size / batch_size, an epoch doesn't cover all possible samples
 # because the M clusters and M*D samples are chosen randomly... the same sample may be repeated in an epoch
-n_epochs = 30
+n_epochs = 100
 n_iterations = int(ceil(float(len(dataset)) / batch_size))
 n_steps = n_iterations * n_epochs
 cluster_refresh_interval = n_iterations
@@ -127,24 +128,16 @@ optimizer = torch.optim.Adam(net.parameters(), lr=model_params.lr[MODEL_ID])
 # Get initial embedding using all samples in training set
 initial_reps = compute_all_reps(net, dataset, chunk_size)
 
-# Train labels from dataset (TODO make into a dataset variable / func)
-y = []
-for i in range(len(dataset)):
-    y.append(dataset[i][1])
-y = np.asarray(y)
+# Train labels from dataset
+y = get_labels(dataset)
 
-# Test labels from dataset (TODO make into a dataset variable / func)
-test_labels = []
-for i in range(len(test_dataset)):
-    test_labels.append(test_dataset[i][1])
-test_labels = np.asarray(test_labels)
+# Test labels from dataset
+test_labels = get_labels(test_dataset)
 
-# dml_loss = DMLLoss(len(np.unique(y)), k, initial_reps)
-
-# Create batcher object (this also stores the cluster centroids than we move occasionally)
-batch_builder = ClusterBatchBuilder(y, k, m, d)
-# batch_builder = DMLLoss(y, k, m, d)  # DML EDIT
-batch_builder.update_clusters(initial_reps)
+# Create loss object (this stores the cluster centroids)
+the_loss = MagnetLoss(y, k, m, d)
+# the_loss = DMLLoss(y, k, m, d)  # DML EDIT
+the_loss.update_clusters(initial_reps)
 
 # Randomly sample the classes then the samples from each class to plot
 plot_sample_indexs, plot_classes = get_indexs(y, n_plot_classes, n_plot_samples)
@@ -154,22 +147,21 @@ plot_test_sample_indexs, plot_test_classes = get_indexs(test_labels, n_plot_clas
 test_train_inds,_ = get_indexs(y, len(set(y)), 10)
 
 # lets plot the initial embeddings
-cluster_classes = batch_builder.cluster_classes
+cluster_classes = the_loss.cluster_classes
 
 #use this to get indexs (indx to match cluster classes) for class ids (plot_classes) that we are plotting
 for i in range(len(cluster_classes)):
-    cluster_classes[i] = batch_builder.unique_classes[cluster_classes[i]]
+    cluster_classes[i] = the_loss.unique_classes[cluster_classes[i]]
 
 cls_inds = []
-for i in range(len(batch_builder.cluster_classes)):
-    if batch_builder.cluster_classes[i] in plot_classes:
+for i in range(len(the_loss.cluster_classes)):
+    if the_loss.cluster_classes[i] in plot_classes:
         cls_inds.append(i)
 
 # plot it
 graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs],
-      # cluster_centers=batch_builder.centroids.detach()[cls_inds],  ################# Added detach for dml, check all following refs to centroids
-      cluster_centers=batch_builder.centroids[cls_inds],
-      cluster_classes=batch_builder.cluster_classes[cls_inds],
+      cluster_centers=ensure_numpy(the_loss.centroids)[cls_inds],
+      cluster_classes=the_loss.cluster_classes[cls_inds],
       savepath="%s/emb-initial%s" % (plots_path, plots_ext))
 
 # Lets setup the training loop
@@ -183,7 +175,7 @@ for e in range(n_epochs):
     # for i in tqdm(range(n_iterations)):
     for iter in range(n_iterations):
         # Sample batch and do forward-backward
-        batch_example_inds, batch_class_inds = batch_builder.gen_batch()
+        batch_example_inds, batch_class_inds = the_loss.gen_batch()
 
         # Get inputs and and labels from the dataset
         inputs = get_inputs(dataset, batch_example_inds).cuda()
@@ -192,8 +184,7 @@ for e in range(n_epochs):
 
         # Calc the outputs (embs) and then the loss + accs
         outputs = net(inputs)
-        batch_loss, batch_example_losses, batch_acc = minibatch_magnet_loss(outputs, labels, m, d, alpha)
-        # batch_loss, batch_example_losses, batch_acc = batch_builder.minibatch_dml_loss(outputs, labels, m, d, alpha)  ################### DML EDIT
+        batch_loss, batch_example_losses, batch_acc = the_loss.minibatch_loss(outputs, labels, m, d, alpha)
 
         # pass the gradient and update
         optimizer.zero_grad()
@@ -205,7 +196,7 @@ for e in range(n_epochs):
         batch_example_losses = batch_example_losses.detach().cpu().numpy()
 
         # Update loss index
-        batch_builder.update_losses(batch_example_inds, batch_example_losses)
+        the_loss.update_losses(batch_example_inds, batch_example_losses)
 
         # store the stats to graph at end
         batch_losses.append(batch_loss)
@@ -218,65 +209,59 @@ for e in range(n_epochs):
             test_reps = compute_all_reps(net, test_dataset, chunk_size)
             test_accb = unsupervised_clustering_accuracy(test_reps, test_labels)
             train_accb = unsupervised_clustering_accuracy(train_reps, y[test_train_inds])
-            test_acc = batch_builder.calc_accuracy(test_reps, test_labels)
-            train_acc = batch_builder.calc_accuracy(train_reps, y[test_train_inds])
+            test_acc = the_loss.calc_accuracy(test_reps, test_labels)
+            train_acc = the_loss.calc_accuracy(train_reps, y[test_train_inds])
 
             print("Iteration %03d/%03d: Tr. L: %0.3f :: Batch. A: %0.3f :::: Tr. A: %0.3f :: Tr. A2: %0.3f :::: Te. A: %0.3f :: Te. A2: %0.3f" % (iter, n_iterations, batch_loss, batch_acc, train_acc, train_accb, test_acc, test_accb))
 
-            batch_ass_ids = np.unique(batch_builder.assignments[batch_example_inds])
+            batch_ass_ids = np.unique(the_loss.assignments[batch_example_inds])
 
             os.makedirs("%s/batch/"%plots_path, exist_ok=True)
 
             graph(outputs.detach().cpu().numpy(),
                   y[batch_example_inds],
-                  # cluster_centers=batch_builder.centroids.detach()[batch_ass_ids],
-                  cluster_centers=batch_builder.centroids[batch_ass_ids],
-                  cluster_classes=batch_builder.cluster_classes[batch_ass_ids],
+                  cluster_centers=ensure_numpy(the_loss.centroids)[batch_ass_ids],
+                  cluster_classes=the_loss.cluster_classes[batch_ass_ids],
                   savepath="%s/batch/emb-e%d-i%d%s" % (plots_path, e + 1, iter, plots_ext))
 
             graph(outputs.detach().cpu().numpy(),
                   y[batch_example_inds],
-                  # cluster_centers=batch_builder.centroids.detach(),
-                  cluster_centers=batch_builder.centroids,
-                  cluster_classes=batch_builder.cluster_classes,
+                  cluster_centers=ensure_numpy(the_loss.centroids),
+                  cluster_classes=the_loss.cluster_classes,
                   savepath="%s/batch/emb-e%d-i%d-all%s" % (plots_path, e + 1, iter, plots_ext))
 
     print('Refreshing clusters')
     reps = compute_all_reps(net, dataset, chunk_size)
-    batch_builder.update_clusters(reps)
+    the_loss.update_clusters(reps)
 
-    cluster_classes = batch_builder.cluster_classes
+    cluster_classes = the_loss.cluster_classes
 
     #use this to get indexs (indx to match cluster classes) for class ids (plot_classes) that we are plotting
     for i in range(len(cluster_classes)):
-        cluster_classes[i] = batch_builder.unique_classes[cluster_classes[i]]
+        cluster_classes[i] = the_loss.unique_classes[cluster_classes[i]]
 
     graph(compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size),
           y[plot_sample_indexs],
-          # cluster_centers=batch_builder.centroids.detach()[cls_inds],
-          cluster_centers=batch_builder.centroids[cls_inds],
-          cluster_classes=batch_builder.cluster_classes[cls_inds],
+          cluster_centers=ensure_numpy(the_loss.centroids)[cls_inds],
+          cluster_classes=the_loss.cluster_classes[cls_inds],
           savepath="%s/emb-e%d%s" % (plots_path, e+1, plots_ext))
 
     graph(compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size),
           test_labels[plot_test_sample_indexs],
-          # cluster_centers=batch_builder.centroids.detach()[cls_inds],
-          cluster_centers=batch_builder.centroids[cls_inds],
-          cluster_classes=batch_builder.cluster_classes[cls_inds],
+          cluster_centers=ensure_numpy(the_loss.centroids)[cls_inds],
+          cluster_classes=the_loss.cluster_classes[cls_inds],
           savepath="%s/test_emb-e%d%s" % (plots_path, e+1, plots_ext))
 
     graph(compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size),
           y[plot_sample_indexs],
-          # cluster_centers=batch_builder.centroids.detach(),
-          cluster_centers=batch_builder.centroids,
-          cluster_classes=batch_builder.cluster_classes,
+          cluster_centers=ensure_numpy(the_loss.centroids),
+          cluster_classes=the_loss.cluster_classes,
           savepath="%s/emb_all-e%d%s" % (plots_path, e+1, plots_ext))
 
     graph(compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size),
           test_labels[plot_test_sample_indexs],
-          # cluster_centers=batch_builder.centroids.detach(),
-          cluster_centers=batch_builder.centroids,
-          cluster_classes=batch_builder.cluster_classes,
+          cluster_centers=ensure_numpy(the_loss.centroids),
+          cluster_classes=the_loss.cluster_classes,
           savepath="%s/test_emb_all-e%d%s" % (plots_path, e+1, plots_ext))
 
     plot_smooth({'loss': batch_losses,
@@ -284,17 +269,17 @@ for e in range(n_epochs):
                  'test acc': test_accs},
                 savepath="%s/loss%s" % (plots_path, plots_ext))
 
-    plot_cluster_data(batch_builder.cluster_losses,
-                      batch_builder.cluster_classes,
+    plot_cluster_data(the_loss.cluster_losses,
+                      the_loss.cluster_classes,
                       title="cluster losses",
                       savepath="%s/cluster_losses-e%d%s" % (plots_path, e+1, plots_ext))
 
     cluster_counts = []
-    for c in range(len(batch_builder.cluster_assignments)):
-        cluster_counts.append(len(batch_builder.cluster_assignments[c]))
+    for c in range(len(the_loss.cluster_assignments)):
+        cluster_counts.append(len(the_loss.cluster_assignments[c]))
 
     plot_cluster_data(cluster_counts,
-                      batch_builder.cluster_classes,
+                      the_loss.cluster_classes,
                       title="cluster counts",
                       savepath="%s/cluster_counts-e%d%s" % (plots_path, e+1, plots_ext))
 
