@@ -17,12 +17,13 @@ from models.configs import model_params
 from models.mnist import MNISTEncoder
 from models.standogs import SDEncoder
 from utils import *
+from dml_ops import DMLLoss
 
 assert torch.cuda.is_available(), 'Error: CUDA not found!'
 
 MODEL_ID = '001'
 # MODEL_ID = '002'
-# MODEL_ID = '003'
+MODEL_ID = '003'
 
 DATASET = model_params.dataset[MODEL_ID]
 
@@ -106,6 +107,8 @@ chunk_size = 32#128
 n_plot_samples = 10 # samples per class to plot
 n_plot_classes = 10
 
+# although we are doing epochs with n_iter = dataset_size / batch_size, an epoch doesn't cover all possible samples
+# because the M clusters and M*D samples are chosen randomly... the same sample may be repeated in an epoch
 n_epochs = 30
 n_iterations = int(ceil(float(len(dataset)) / batch_size))
 n_steps = n_iterations * n_epochs
@@ -136,8 +139,11 @@ for i in range(len(test_dataset)):
     test_labels.append(test_dataset[i][1])
 test_labels = np.asarray(test_labels)
 
+# dml_loss = DMLLoss(len(np.unique(y)), k, initial_reps)
+
 # Create batcher object (this also stores the cluster centroids than we move occasionally)
 batch_builder = ClusterBatchBuilder(y, k, m, d)
+# batch_builder = DMLLoss(y, k, m, d)  # DML EDIT
 batch_builder.update_clusters(initial_reps)
 
 # Randomly sample the classes then the samples from each class to plot
@@ -161,6 +167,7 @@ for i in range(len(batch_builder.cluster_classes)):
 
 # plot it
 graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs],
+      # cluster_centers=batch_builder.centroids.detach()[cls_inds],  ################# Added detach for dml, check all following refs to centroids
       cluster_centers=batch_builder.centroids[cls_inds],
       cluster_classes=batch_builder.cluster_classes[cls_inds],
       savepath="%s/emb-initial%s" % (plots_path, plots_ext))
@@ -186,6 +193,7 @@ for e in range(n_epochs):
         # Calc the outputs (embs) and then the loss + accs
         outputs = net(inputs)
         batch_loss, batch_example_losses, batch_acc = minibatch_magnet_loss(outputs, labels, m, d, alpha)
+        # batch_loss, batch_example_losses, batch_acc = batch_builder.minibatch_dml_loss(outputs, labels, m, d, alpha)  ################### DML EDIT
 
         # pass the gradient and update
         optimizer.zero_grad()
@@ -216,19 +224,19 @@ for e in range(n_epochs):
             print("Iteration %03d/%03d: Tr. L: %0.3f :: Batch. A: %0.3f :::: Tr. A: %0.3f :: Tr. A2: %0.3f :::: Te. A: %0.3f :: Te. A2: %0.3f" % (iter, n_iterations, batch_loss, batch_acc, train_acc, train_accb, test_acc, test_accb))
 
             batch_ass_ids = np.unique(batch_builder.assignments[batch_example_inds])
-            t = batch_builder.cluster_classes[batch_ass_ids]
-            tt = batch_builder.centroids[batch_ass_ids]
 
             os.makedirs("%s/batch/"%plots_path, exist_ok=True)
 
             graph(outputs.detach().cpu().numpy(),
                   y[batch_example_inds],
+                  # cluster_centers=batch_builder.centroids.detach()[batch_ass_ids],
                   cluster_centers=batch_builder.centroids[batch_ass_ids],
                   cluster_classes=batch_builder.cluster_classes[batch_ass_ids],
                   savepath="%s/batch/emb-e%d-i%d%s" % (plots_path, e + 1, iter, plots_ext))
 
             graph(outputs.detach().cpu().numpy(),
                   y[batch_example_inds],
+                  # cluster_centers=batch_builder.centroids.detach(),
                   cluster_centers=batch_builder.centroids,
                   cluster_classes=batch_builder.cluster_classes,
                   savepath="%s/batch/emb-e%d-i%d-all%s" % (plots_path, e + 1, iter, plots_ext))
@@ -245,24 +253,28 @@ for e in range(n_epochs):
 
     graph(compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size),
           y[plot_sample_indexs],
+          # cluster_centers=batch_builder.centroids.detach()[cls_inds],
           cluster_centers=batch_builder.centroids[cls_inds],
           cluster_classes=batch_builder.cluster_classes[cls_inds],
           savepath="%s/emb-e%d%s" % (plots_path, e+1, plots_ext))
 
     graph(compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size),
           test_labels[plot_test_sample_indexs],
+          # cluster_centers=batch_builder.centroids.detach()[cls_inds],
           cluster_centers=batch_builder.centroids[cls_inds],
           cluster_classes=batch_builder.cluster_classes[cls_inds],
           savepath="%s/test_emb-e%d%s" % (plots_path, e+1, plots_ext))
 
     graph(compute_reps(net, dataset, plot_sample_indexs, chunk_size=chunk_size),
           y[plot_sample_indexs],
+          # cluster_centers=batch_builder.centroids.detach(),
           cluster_centers=batch_builder.centroids,
           cluster_classes=batch_builder.cluster_classes,
           savepath="%s/emb_all-e%d%s" % (plots_path, e+1, plots_ext))
 
     graph(compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size),
           test_labels[plot_test_sample_indexs],
+          # cluster_centers=batch_builder.centroids.detach(),
           cluster_centers=batch_builder.centroids,
           cluster_classes=batch_builder.cluster_classes,
           savepath="%s/test_emb_all-e%d%s" % (plots_path, e+1, plots_ext))

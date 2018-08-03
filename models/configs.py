@@ -7,7 +7,7 @@ model_params = edict()
 
 model_params.emb_dim = {'001': 2,
                         '002': 64,
-                        '003': 2}#1024}
+                        '003': 1024}
 
 model_params.dataset = {'001': 'MNIST',
                         '002': 'STANDOGS',
