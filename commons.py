@@ -7,6 +7,8 @@ https://github.com/pumpikano/tf-magnet-loss
 import numpy as np
 import torch
 
+from utils import ensure_tensor
+
 class Loss(object):
     """Sample minibatches for magnet loss."""
     def __init__(self, labels, k, m, d):
@@ -84,7 +86,8 @@ class Loss(object):
         # sc = sc * sc
         # sc = sc.sum(2)
 
-        sc = self.euclidean_distance(torch.from_numpy(self.centroids).float().cuda(), torch.from_numpy(rep_data).float().cuda().unsqueeze(1)).detach().cpu().numpy()
+        sc = self.euclidean_distance(ensure_tensor(self.centroids).float().cuda(),
+                                     ensure_tensor(rep_data).float().cuda().unsqueeze(1)).detach().cpu().numpy()
 
         preds = np.argmin(sc, 1)  # calc closest clusters
 

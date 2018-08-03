@@ -1,10 +1,13 @@
 
 import torch
 import torch.nn.functional as F
+import torch.nn
 from sklearn.cluster import KMeans
 import numpy as np
 
 from commons import Loss
+from utils import ensure_tensor
+import torch.nn as nn
 
 class DMLLoss(Loss):
 
@@ -19,7 +22,12 @@ class DMLLoss(Loss):
         """
         # Lazily allocate tensor for centroids
         if self.centroids is None:
-            self.centroids = torch.zeros(self.num_classes * self.k, rep_data.shape[1], requires_grad=True).cuda()
+            self.centroids = np.zeros([self.num_classes * self.k, rep_data.shape[1]])
+        # if self.centroids is None:
+        #     # self.centroids = torch.zeros(self.num_classes * self.k, rep_data.shape[1], requires_grad=True).detach().requires_grad_().cuda()
+        #     self.centroids = torch.zeros(self.num_classes * self.k, rep_data.shape[1], requires_grad=True).cuda()
+        #     self.centroids = nn.Parameter(self.centroids)
+        #     # self.centroids = torch.nn.Embedding(self.num_classes * self.k, rep_data.shape[1]).cuda()
 
         for c in range(self.num_classes):
             class_mask = self.labels == self.unique_classes[c]  # build true/false mask for classes to allow us to extract them
@@ -34,6 +42,8 @@ class DMLLoss(Loss):
 
             # Update assignments with new global cluster indexes (ie each sample in dataset belongs to cluster id x)
             self.assignments[class_mask] = self.get_cluster_ind(c, kmeans.predict(class_examples))
+
+        self.centroids = nn.Parameter(torch.cuda.FloatTensor(self.centroids).requires_grad_()) # make leaf variable after editing it then wrap in param
 
         # Construct a map from cluster to example indexes for fast batch creation (the opposite of assignmnets)
         for cluster in range(self.k * self.num_classes):
@@ -77,19 +87,20 @@ class DMLLoss(Loss):
             stop = start + self.d
             batch_indexes[start:stop] = x
 
-        # Translate class indexes to index for classes within the batch
-        # ie. [y1, y7, y56, y21, y89, y21,...] > [0, 1, 2, 3, 4, 3, ...]
+        # Get classes for the clusters
         class_inds = self.cluster_classes[clusters]
-        batch_class_inds = []
-        inds_map = {}
-        class_count = 0
-        for c in class_inds:
-            if c not in inds_map:
-                inds_map[c] = class_count
-                class_count += 1
-            batch_class_inds.append(inds_map[c])
+        # batch_class_inds = []
+        # inds_map = {}
+        # class_count = 0
+        # for c in class_inds:
+        #     if c not in inds_map:
+        #         inds_map[c] = class_count
+        #         class_count += 1
+        #     batch_class_inds.append(inds_map[c])
 
-        return batch_indexes, np.repeat(batch_class_inds, self.d)
+
+        # return batch_indexes, np.repeat(batch_class_inds, self.d)
+        return batch_indexes, np.repeat(class_inds, self.d)
 
     def loss(self, r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
         """Compute magnet loss.
@@ -122,22 +133,22 @@ class DMLLoss(Loss):
 
         # Take cluster means within the batch
         # tf.dynamic_partition used clusters which is just an array we create in minibatch_magnet_loss, so can just reshape
-        cluster_examples = r.view(n_clusters, int(float(r.shape[0])/float(n_clusters)), r.shape[1])
-        cluster_means = cluster_examples.mean(1)
+        # cluster_examples = r.view(n_clusters, int(float(r.shape[0])/float(n_clusters)), r.shape[1])
+        # cluster_means = cluster_examples.mean(1)
 
         # Compute squared distance of each example to each cluster centroid (euclid without the root)
         sample_costs = self.euclidean_distance(self.centroids, r.unsqueeze(1).cuda())
 
-        # Select distances of examples to the centroids of same class... infact the closest (min cost)
-        intra_cluster_costs = torch.ones_like(sample_costs)*(sample_costs.max()*1.5)
-        for i, c in enumerate(classes.cpu().numpy()):  # TODO fix loop to use smart matrix ops
-            # intra_cluster_costs[i, c] = sample_costs[i, c]
-            inds = self.cluster_classes == c
-            inds = inds.astype(int)
-            intra_cluster_costs[i, inds.nonzero()] = sample_costs[i, inds.nonzero()]
-        # intra_cluster_mask = comparison_mask(clusters, torch.arange(n_clusters)).float()
-        # intra_cluster_costs = (intra_cluster_mask.cuda() * sample_costs).sum(1)
-        intra_cluster_costs, _ = intra_cluster_costs.min(1)
+        # Compute the two masks selecting the sample_costs related to each class(r)=class(cluster/rep)
+        intra_cluster_mask = comparison_mask(classes, torch.from_numpy(self.cluster_classes).cuda())
+        intra_cluster_mask_op = ~intra_cluster_mask
+
+        # Compute the costs, we only want to take the min of the closest r to it's corresponding cluster/rep
+        # therefore we make all values for other clusters bigger so they are ignored..
+        intra_cluster_costs_ignore = (intra_cluster_mask_op.float() * (sample_costs.max() * 1.5))
+        intra_cluster_costs_desired = intra_cluster_mask.float() * sample_costs
+        intra_cluster_costs_together = intra_cluster_costs_ignore + intra_cluster_costs_desired
+        intra_cluster_costs, _ = intra_cluster_costs_together.min(1)
 
         # Compute variance of intra-cluster distances
         N = r.shape[0]
@@ -149,7 +160,7 @@ class DMLLoss(Loss):
 
         # Compute denominator
         # diff_class_mask = tf.to_float(tf.logical_not(comparison_mask(classes, cluster_classes)))
-        diff_class_mask = (~comparison_mask(classes, cluster_classes)).float()
+        diff_class_mask = (intra_cluster_mask_op).float()
         denom_sample_costs = torch.exp(var_normalizer * sample_costs)
         denominator = (diff_class_mask.cuda() * denom_sample_costs).sum(1)
 
@@ -159,6 +170,7 @@ class DMLLoss(Loss):
         total_loss = losses.mean()
 
         _, preds = sample_costs.min(1)
+        preds = ensure_tensor(self.cluster_classes[preds]).cuda()  # convert from cluster ids to class ids
         acc = torch.eq(classes, preds).float().mean()
 
         return total_loss, losses, acc

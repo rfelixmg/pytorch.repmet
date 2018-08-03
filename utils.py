@@ -288,6 +288,16 @@ def ensure_numpy(x):
         return x
     elif type(x).__module__ == torch.__name__:
         return x.detach().cpu().numpy()
+    elif type(x).__module__ == 'torch.nn.parameter':
+        return x.data.cpu().numpy()
+
+def ensure_tensor(x):
+    if type(x).__module__ == torch.__name__:
+        return x
+    elif type(x).__module__ == np.__name__:
+        return torch.from_numpy(x)
+    elif type(x).__module__ == 'torch.nn.parameter':
+        return x
 
 def get_labels(dataset, numpy=True):
     y = []

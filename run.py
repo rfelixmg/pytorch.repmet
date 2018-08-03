@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+import math
 
 import torch.backends.cudnn as cudnn
 import torchvision
@@ -11,8 +12,6 @@ from data.stanford_dogs import StanDogs
 from data.oxford_flowers import OxFlowers
 from data.utils import get_inputs
 from models.utils import compute_all_reps, compute_reps
-from magnet_ops import *
-from magnet_tools import *
 from models.configs import model_params
 from models.mnist import MNISTEncoder
 from models.standogs import SDEncoder
@@ -111,7 +110,7 @@ n_plot_classes = 10
 # although we are doing epochs with n_iter = dataset_size / batch_size, an epoch doesn't cover all possible samples
 # because the M clusters and M*D samples are chosen randomly... the same sample may be repeated in an epoch
 n_epochs = 100
-n_iterations = int(ceil(float(len(dataset)) / batch_size))
+n_iterations = int(math.ceil(float(len(dataset)) / batch_size))
 n_steps = n_iterations * n_epochs
 cluster_refresh_interval = n_iterations
 
@@ -120,10 +119,6 @@ net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
 # Use the GPU
 net.cuda()
 cudnn.benchmark = True
-
-# Loss
-optimizer = torch.optim.Adam(net.parameters(), lr=model_params.lr[MODEL_ID])
-# optimizer = torch.optim.SGD(net.parameters(), lr=model_params.lr[MODEL_ID], momentum=0.9)
 
 # Get initial embedding using all samples in training set
 initial_reps = compute_all_reps(net, dataset, chunk_size)
@@ -135,8 +130,8 @@ y = get_labels(dataset)
 test_labels = get_labels(test_dataset)
 
 # Create loss object (this stores the cluster centroids)
-the_loss = MagnetLoss(y, k, m, d)
-# the_loss = DMLLoss(y, k, m, d)  # DML EDIT
+# the_loss = MagnetLoss(y, k, m, d)
+the_loss = DMLLoss(y, k, m, d)  # DML EDIT
 the_loss.update_clusters(initial_reps)
 
 # Randomly sample the classes then the samples from each class to plot
@@ -164,6 +159,13 @@ graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs],
       cluster_classes=the_loss.cluster_classes[cls_inds],
       savepath="%s/emb-initial%s" % (plots_path, plots_ext))
 
+
+# optimizer = torch.optim.Adam(net.parameters(), lr=model_params.lr[MODEL_ID])
+# optimizer = torch.optim.Adam([net.parameters(), the_loss.centroids], lr=model_params.lr[MODEL_ID])
+optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=model_params.lr[MODEL_ID])
+# optimizer = torch.optim.SGD(net.parameters(), lr=model_params.lr[MODEL_ID], momentum=0.9)
+
+
 # Lets setup the training loop
 batch_losses = []
 batch_accs = []
@@ -188,7 +190,7 @@ for e in range(n_epochs):
 
         # pass the gradient and update
         optimizer.zero_grad()
-        batch_loss.backward()
+        batch_loss.backward()#retain_graph=True)
         optimizer.step()
 
         # just changing some types
@@ -229,6 +231,12 @@ for e in range(n_epochs):
                   cluster_centers=ensure_numpy(the_loss.centroids),
                   cluster_classes=the_loss.cluster_classes,
                   savepath="%s/batch/emb-e%d-i%d-all%s" % (plots_path, e + 1, iter, plots_ext))
+
+            graph(np.zeros_like(outputs.detach().cpu().numpy()),
+                  np.zeros_like(y[batch_example_inds]),
+                  cluster_centers=ensure_numpy(the_loss.centroids),
+                  cluster_classes=the_loss.cluster_classes,
+                  savepath="%s/batch/clusters-e%d-i%d%s" % (plots_path, e + 1, iter, plots_ext))
 
     print('Refreshing clusters')
     reps = compute_all_reps(net, dataset, chunk_size)
