@@ -25,6 +25,9 @@ MODEL_ID = '001'
 # MODEL_ID = '002'
 # MODEL_ID = '003'
 
+LOSS = 'MAGNET'
+LOSS = 'DML'
+
 DATASET = model_params.dataset[MODEL_ID]
 
 if DATASET == 'MNIST':
@@ -130,8 +133,12 @@ y = get_labels(dataset)
 test_labels = get_labels(test_dataset)
 
 # Create loss object (this stores the cluster centroids)
-# the_loss = MagnetLoss(y, k, m, d)
-the_loss = DMLLoss(y, k, m, d)  # DML EDIT
+if LOSS == "MAGNET":
+    the_loss = MagnetLoss(y, k, m, d)
+elif LOSS == "DML":
+    the_loss = DMLLoss(y, k, m, d)
+
+# Initialise the embeddings/representations/clusters
 the_loss.update_clusters(initial_reps)
 
 # Randomly sample the classes then the samples from each class to plot
@@ -159,12 +166,8 @@ graph(initial_reps[plot_sample_indexs], y[plot_sample_indexs],
       cluster_classes=the_loss.cluster_classes[cls_inds],
       savepath="%s/emb-initial%s" % (plots_path, plots_ext))
 
-
 # optimizer = torch.optim.Adam(net.parameters(), lr=model_params.lr[MODEL_ID])
-# optimizer = torch.optim.Adam([net.parameters(), the_loss.centroids], lr=model_params.lr[MODEL_ID])
 optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=model_params.lr[MODEL_ID])
-# optimizer = torch.optim.SGD(net.parameters(), lr=model_params.lr[MODEL_ID], momentum=0.9)
-
 
 # Lets setup the training loop
 batch_losses = []

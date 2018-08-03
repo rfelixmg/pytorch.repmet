@@ -23,11 +23,6 @@ class DMLLoss(Loss):
         # Lazily allocate tensor for centroids
         if self.centroids is None:
             self.centroids = np.zeros([self.num_classes * self.k, rep_data.shape[1]])
-        # if self.centroids is None:
-        #     # self.centroids = torch.zeros(self.num_classes * self.k, rep_data.shape[1], requires_grad=True).detach().requires_grad_().cuda()
-        #     self.centroids = torch.zeros(self.num_classes * self.k, rep_data.shape[1], requires_grad=True).cuda()
-        #     self.centroids = nn.Parameter(self.centroids)
-        #     # self.centroids = torch.nn.Embedding(self.num_classes * self.k, rep_data.shape[1]).cuda()
 
         for c in range(self.num_classes):
             class_mask = self.labels == self.unique_classes[c]  # build true/false mask for classes to allow us to extract them
@@ -43,7 +38,9 @@ class DMLLoss(Loss):
             # Update assignments with new global cluster indexes (ie each sample in dataset belongs to cluster id x)
             self.assignments[class_mask] = self.get_cluster_ind(c, kmeans.predict(class_examples))
 
-        self.centroids = nn.Parameter(torch.cuda.FloatTensor(self.centroids).requires_grad_()) # make leaf variable after editing it then wrap in param
+        # make leaf variable after editing it then wrap in param
+        # TODO see if it works without the param wrap
+        self.centroids = nn.Parameter(torch.cuda.FloatTensor(self.centroids).requires_grad_())
 
         # Construct a map from cluster to example indexes for fast batch creation (the opposite of assignmnets)
         for cluster in range(self.k * self.num_classes):
