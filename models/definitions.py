@@ -53,9 +53,10 @@ class ResNetEncoder(nn.Module):
     def forward(self, x):
         if len(x.shape) < 4:
             x = x.view(x.shape[0], 1, x.shape[1], x.shape[2])
-        x = F.relu(self.bn1(self.backbone(x)))
+        x = self.backbone(x)
 
         if self.fc_dim:
+            x = F.relu(self.bn1(x))
             x = self.fc1(x)
 
         if self.norm:

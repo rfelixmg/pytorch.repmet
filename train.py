@@ -258,9 +258,9 @@ def train(run_id,
             plot_train_emb = compute_reps(net, train_dataset, plot_sample_indexs, chunk_size=chunk_size)
             plot_test_emb = compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size)
 
-            os.makedirs("%s/emb/"%plots_path, exist_ok=True)
+            os.makedirs("%s/train-emb/"%plots_path, exist_ok=True)
             os.makedirs("%s/test-emb/"%plots_path, exist_ok=True)
-            os.makedirs("%s/emb-all/"%plots_path, exist_ok=True)
+            os.makedirs("%s/train-emb-all/"%plots_path, exist_ok=True)
             os.makedirs("%s/test-emb-all/"%plots_path, exist_ok=True)
             os.makedirs("%s/cluster-losses/"%plots_path, exist_ok=True)
             os.makedirs("%s/cluster-counts/"%plots_path, exist_ok=True)
@@ -269,7 +269,7 @@ def train(run_id,
                   train_y[plot_sample_indexs],
                   cluster_centers=ensure_numpy(the_loss.centroids)[cls_inds],
                   cluster_classes=the_loss.cluster_classes[cls_inds],
-                  savepath="%s/emb/i%06d%s" % (plots_path, iteration, plots_ext))
+                  savepath="%s/train-emb/i%06d%s" % (plots_path, iteration, plots_ext))
 
             graph(plot_test_emb,
                   test_y[plot_test_sample_indexs],
@@ -281,7 +281,7 @@ def train(run_id,
                   train_y[plot_sample_indexs],
                   cluster_centers=ensure_numpy(the_loss.centroids),
                   cluster_classes=the_loss.cluster_classes,
-                  savepath="%s/emb-all/i%06d%s" % (plots_path, iteration, plots_ext))
+                  savepath="%s/train-emb-all/i%06d%s" % (plots_path, iteration, plots_ext))
 
             graph(plot_test_emb,
                   test_y[plot_test_sample_indexs],
@@ -361,9 +361,9 @@ if __name__ == "__main__":
     #       n_plot_samples=args.n_plot_samples,
     #       n_plot_classes=args.n_plot_classes)
 
-    train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=3, alpha=1.0)
-    train('002', 'mnist', 'mnist_default', 'dml', m=8, d=8, k=3, alpha=1.0)
-    train('003', 'oxford_flowers', 'resnet50_e512', 'magnet', m=12, d=4, k=3, alpha=1.0)
+    # train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=3, alpha=1.0)
+    # train('002', 'mnist', 'mnist_default', 'dml', m=8, d=8, k=3, alpha=1.0)
+    # train('003', 'oxford_flowers', 'resnet50_e512', 'magnet', m=12, d=4, k=3, alpha=1.0)
     train('004', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=1.0)
     # train('005', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=2.43)
     # train('006', 'stanford_dogs', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=0.71)
