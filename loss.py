@@ -1,13 +1,13 @@
 '''
-Taken from the tf-magnet-loss-master on github:
+Modified from the tf-magnet-loss-master on github:
 https://github.com/pumpikano/tf-magnet-loss
 
 '''
 
 import numpy as np
 import torch
-
 from utils import ensure_tensor
+
 
 class Loss(object):
     """Sample minibatches for magnet loss."""
@@ -115,12 +115,12 @@ class Loss(object):
     def minibatch_loss(self, r, classes, m, d, alpha=1.0):
         raise NotImplementedError
 
-    @staticmethod
-    def magnet_dist(means, reps):
-        sample_costs = means - reps.unsqueeze(1)
-        sample_costs = sample_costs * sample_costs
-        sample_costs = sample_costs.sum(2)
-        return sample_costs
+    # @staticmethod
+    # def magnet_dist(means, reps):
+    #     sample_costs = means - reps.unsqueeze(1)
+    #     sample_costs = sample_costs * sample_costs
+    #     sample_costs = sample_costs.sum(2)
+    #     return sample_costs
 
     @staticmethod
     def euclidean_distance(x, y):

@@ -1,10 +1,9 @@
 '''
-Taken from the tf-magnet-loss-master on github:
+Modified from the tf-magnet-loss-master on github:
 https://github.com/pumpikano/tf-magnet-loss
 
 '''
 
-# import tensorflow as tf
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -15,32 +14,11 @@ from sklearn.manifold import TSNE
 from scipy.stats import itemfreq
 from sklearn.cluster import KMeans
 from itertools import chain
+
 import torch
 from torchvision import transforms
 
-# Model building blocks
-
-# def weight_variable(shape):
-#     initial = tf.truncated_normal(shape, stddev=0.1)
-#     return tf.Variable(initial)
-#
-#
-# def bias_variable(shape):
-#     initial = tf.constant(0.1, shape=shape)
-#     return tf.Variable(initial)
-#
-#
-# def conv2d(x, W):
-#     return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
-#
-#
-# def max_pool_2x2(x):
-#     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
-#                           strides=[1, 2, 2, 1], padding='SAME')
-
-
-# Visualization
-
+# Visualization + Plotting + Graphing
 def moving_average(a, n=3):
     # Adapted from http://stackoverflow.com/questions/14313510/does-numpy-have-a-function-for-calculating-moving-average
     ret = np.cumsum(a, dtype=float)
@@ -150,6 +128,7 @@ def plot_embedding(X, y, imgs=None, title=None, savepath=None):
         plt.show()
     plt.clf()
 
+
 def graph(vectors, labels, cluster_centers=None, cluster_classes=None, savepath=None):
 
     if cluster_centers is not None:
@@ -210,6 +189,7 @@ def plot_metric(*args, **kwargs):
         plt.title(kwargs['title'])
     plt.show()
 
+
 def disp_inputs(input_tensor, labels):
     if len(input_tensor.shape) > 3:
         for input in input_tensor[:]:
@@ -220,6 +200,7 @@ def disp_inputs(input_tensor, labels):
         img = input_tensor
         plt.imshow(img)
         plt.show()
+
 
 def get_indexs(labels, n_classes, n_samples, class_ids=None):
     sample_indexs = []
@@ -236,8 +217,8 @@ def get_indexs(labels, n_classes, n_samples, class_ids=None):
 
     return sample_indexs, class_ids
 
-# Evaluation
 
+# Evaluation
 def compute_rand_index(emb, labels):
     """
     https://en.wikipedia.org/wiki/Rand_index
@@ -283,6 +264,8 @@ def unsupervised_clustering_accuracy(emb, labels):
         acc -= G[cluster, best]
     return acc / float(len(labels))
 
+
+# Type changing
 def ensure_numpy(x):
     if type(x).__module__ == np.__name__:
         return x
@@ -290,6 +273,7 @@ def ensure_numpy(x):
         return x.detach().cpu().numpy()
     elif type(x).__module__ == 'torch.nn.parameter':
         return x.data.cpu().numpy()
+
 
 def ensure_tensor(x):
     if type(x).__module__ == torch.__name__:
@@ -299,6 +283,8 @@ def ensure_tensor(x):
     elif type(x).__module__ == 'torch.nn.parameter':
         return x
 
+
+# Dataset labels formating
 def get_labels(dataset, numpy=True):
     y = []
     for i in range(len(dataset)):
@@ -308,3 +294,49 @@ def get_labels(dataset, numpy=True):
     else:
         return y
 
+
+# Get dataset inputs
+def get_inputs(dataset, indexs):
+    """
+    Gets the input data from a dataset
+    :param dataset: The dataset
+    :param indexs: List of the sample indexs
+    :return: A tensor with the inputs stacked
+    """
+    inputs = None
+    c = 0
+    for index in indexs:
+        if c == 0:
+            inputs = torch.unsqueeze(dataset[index][0], 0)
+        else:
+            inputs = torch.cat((inputs, torch.unsqueeze(dataset[index][0], 0)), 0)
+        c += 1
+    return inputs
+
+
+# Calculating Embeddings
+def compute_reps(net, dataset, indexs, chunk_size=None):
+    """Compute representations/embeddings
+
+    :param net: The net to foward through
+    :param dataset: the dataset
+    :param indexs: the indexs of the samples to pass
+    :return: embeddings as a numpy array
+    """
+    if chunk_size:
+        initial_reps = []
+        for s in range(0, len(indexs), chunk_size):
+            indexs_inner = list(indexs[s:min(s + chunk_size, len(indexs))])
+            initial_reps.append(ensure_numpy(net(get_inputs(dataset, indexs_inner))))
+
+        return np.vstack(initial_reps)
+    else:
+        return ensure_numpy(net(get_inputs(dataset, indexs)))
+        # return net(get_inputs(dataset, indexs)*255).detach().cpu().numpy()  # MNIST only learns when is 0-255 not 0-1
+
+def compute_all_reps(net, dataset, chunk_size):
+    """Compute representations for entire set in chunks (sequential non-shuffled batches).
+
+    Basically just forwards the inputs through the net to get the embedding vectors in 'chunks'
+    """
+    return compute_reps(net, dataset, list(range(len(dataset))), chunk_size=chunk_size)

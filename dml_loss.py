@@ -1,13 +1,11 @@
-
+import numpy as np
 import torch
 import torch.nn.functional as F
-import torch.nn
-from sklearn.cluster import KMeans
-import numpy as np
-
-from commons import Loss
-from utils import ensure_tensor
 import torch.nn as nn
+from sklearn.cluster import KMeans
+
+from loss import Loss
+from utils import ensure_tensor
 
 class DMLLoss(Loss):
 

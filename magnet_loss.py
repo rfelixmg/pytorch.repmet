@@ -1,15 +1,9 @@
-'''
-Taken from the tf-magnet-loss-master on github:
-https://github.com/pumpikano/tf-magnet-loss
-
-'''
-
 import numpy as np
 from sklearn.cluster import KMeans
 import torch
 import torch.nn.functional as F
 
-from commons import Loss
+from loss import Loss
 
 class MagnetLoss(Loss):
     """Sample minibatches for magnet loss."""
