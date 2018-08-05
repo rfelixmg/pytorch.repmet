@@ -1,29 +1,26 @@
-# Magnet Loss in PyTorch
+# Magnet Loss and RepMet in PyTorch
 
-This is a direct conversion from the Tensorflow version: [pumpikano/tf-magnet-loss](https://github.com/pumpikano/tf-magnet-loss)
+This takes a lot from the Tensorflow Magnet Loss code: [pumpikano/tf-magnet-loss](https://github.com/pumpikano/tf-magnet-loss)
 
-
-![Figure 3 from paper](https://raw.githubusercontent.com/pumpikano/tf-magnet-loss/master/magnet_loss.png)
+### Magnet Loss
+![Figure 3 from paper](magnet.png)
 
 "[Metric Learning with Adaptive Density Discrimination](http://arxiv.org/pdf/1511.05939v2.pdf)" introduced
 a new optimization objective for distance metric learning called Magnet Loss that, unlike related losses,
 operates on entire neighborhoods in the representation space and adaptively defines the similarity that is
 being optimized to account for the changing representations of the training data.
 
+### RepMet
+![Figure 2 from paper](repmet.png)
+
+"[RepMet: Representative-based Metric Learning for Classification and One-shot Object Detection](https://arxiv.org/pdf/1806.04728.pdf)"
+extends upon magnet loss by storing the centroid as representations that are learnable, rather than just
+ statically calculated every now and again with k-means.
+
 ## Implementation
 
 Tested with python 3.6 + pytorch 0.4 + cuda 9.1
 
-The Magnet Loss function is implemented in `magnet_ops.py`. The function `magnet_loss` implements the exact
-loss function and requires class and cluster labels for each example. This formulation allows varying numbers
-of clusters per class. The `minibatch_magnet_loss` is a thin wrapper around `magnet_loss` that assumes a
-particular batch structure as described in section 3.2 of the paper. This minibatch loss, when combined with
-the sampling procedure for batches described in the paper, is a stochastic approximation of the exact loss.
+See `train.py` for training the model, please ensure your `path` is set in `configs.py`.
 
-The module `magnet_tools.py` contains a `ClusterBatchBuilder` class that encapsulates the state and logic for
-computing, maintaining, and sampling from a cluster index of the training data.
-
-## Experiments
-
-A simple experiment of MNIST shows that the implementation works, but isn't an interesting case for comparison
-to other losses since MNIST is too simple.
+Currently works on MNIST, working on getting the implementation to work with [Oxford Flowers 102](http://www.robots.ox.ac.uk/~vgg/data/flowers/102/) and [Stanford Dogs](http://vision.stanford.edu/aditya86/ImageNetDogs/) at the moment.
