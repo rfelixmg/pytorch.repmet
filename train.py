@@ -234,7 +234,7 @@ def train(run_id,
         # Update loss index
         the_loss.update_losses(batch_example_inds, batch_example_losses)
 
-        if not iteration % calc_acc_every:
+        if iteration > 0 and not iteration % calc_acc_every:
             # calc all the accs
             train_reps = compute_reps(net, train_dataset, test_train_inds, chunk_size)
             test_reps = compute_all_reps(net, test_dataset, chunk_size)
@@ -288,7 +288,7 @@ def train(run_id,
         train_accs.append(train_accb)
         test_accs.append(test_accb)
 
-        if not iteration % plot_every:
+        if iteration > 0 and not iteration % plot_every:
             #use this to get indexs (indx to match cluster classes) for class ids (plot_classes) that we are plotting
             for i in range(len(cluster_classes)):
                 cluster_classes[i] = the_loss.unique_classes[cluster_classes[i]]
@@ -346,7 +346,7 @@ def train(run_id,
                               title="cluster counts",
                               savepath="%s/cluster-counts/i%06d%s" % (plots_path, iteration, plots_ext))
 
-        if not iteration % save_every:
+        if iteration > 0 and not iteration % save_every:
             if save_path:
                 if test_accb > best_acc:
                     print("Saving model (is best): %s/i%06d%s" % (save_path, iteration, '.pth'))
