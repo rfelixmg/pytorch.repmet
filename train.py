@@ -427,7 +427,7 @@ def parse_args():
     parser.add_argument('--refresh_clusters_every', required=False, help='refresh the clusters every ? iterations', default=500, type=int)
     parser.add_argument('--calc_acc_every', required=False, help='calculate the accuracy every ? iterations', default=100, type=int)
     parser.add_argument('--load_latest', required=False, help='load a model if presaved', default=True)
-    parser.add_argument('--save_every', required=False, help='save the model every ? iterations', default=100, type=int)
+    parser.add_argument('--save_every', required=False, help='save the model every ? iterations', default=1000, type=int)
     parser.add_argument('--save_path', required=False, help='where to save the models', default=configs.general.paths.models)
     parser.add_argument('--plot_every', required=False, help='plot graphs every ? iterations', default=500, type=int)
     parser.add_argument('--plots_path', required=False, help='where to save the plots', default=configs.general.paths.graphing)
