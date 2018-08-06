@@ -17,5 +17,6 @@ else:
     general.paths.root = expanduser("~")
 
 general.paths.graphing = join(general.paths.root, 'MODELS', 'repmet', 'plots')
+general.paths.models = join(general.paths.root, 'MODELS', 'repmet', 'saves')
 general.paths.imagesets = join(general.paths.root, 'DATASETS', 'IMAGE')
 general.paths.videosets = join(general.paths.root, 'DATASETS', 'VIDEO')
