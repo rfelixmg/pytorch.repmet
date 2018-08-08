@@ -7,11 +7,12 @@ https://github.com/pumpikano/tf-magnet-loss
 import numpy as np
 import torch
 from utils import ensure_tensor
+import torch.nn.functional as F
 
 
 class Loss(object):
     """Sample minibatches for magnet loss."""
-    def __init__(self, labels, k, m, d):
+    def __init__(self, labels, k, m, d, measure='euclidean'):
 
         self.unique_classes = np.unique(labels)
         self.num_classes = self.unique_classes.shape[0]
@@ -20,6 +21,11 @@ class Loss(object):
         self.k = k
         self.m = m
         self.d = d
+
+        if measure == 'euclidean':
+            self.calculate_distance = self.euclidean_distance
+        elif measure == 'cosine':
+            self.calculate_distance = self.cosine_distance
 
         self.centroids = None
         self.assignments = np.zeros_like(labels, int)
@@ -82,12 +88,9 @@ class Loss(object):
         :param rep_data:
         :return:
         """
-        # sc = self.centroids - np.expand_dims(rep_data, 1)
-        # sc = sc * sc
-        # sc = sc.sum(2)
+        sc = self.calculate_distance(ensure_tensor(self.centroids).float().cuda(),
+                                     ensure_tensor(rep_data).float().cuda()).detach().cpu().numpy()
 
-        sc = self.euclidean_distance(ensure_tensor(self.centroids).float().cuda(),
-                                     ensure_tensor(rep_data).float().cuda().unsqueeze(1)).detach().cpu().numpy()
 
         preds = np.argmin(sc, 1)  # calc closest clusters
 
@@ -124,5 +127,9 @@ class Loss(object):
 
     @staticmethod
     def euclidean_distance(x, y):
-        return torch.sum((x - y) ** 2, dim=2)
+        return torch.sum((x - y.unsqueeze(1)) ** 2, dim=2)
+
+    @staticmethod
+    def cosine_distance(x, y):
+        return F.cosine_similarity(x.transpose(0, 1).unsqueeze(0), y.unsqueeze(2))
 

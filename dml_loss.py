@@ -9,8 +9,8 @@ from utils import ensure_tensor
 
 class DMLLoss(Loss):
 
-    def __init__(self, labels, k, m, d):
-        super().__init__(labels, k, m, d)
+    def __init__(self, labels, k, m, d, measure):
+        super().__init__(labels, k, m, d, measure)
 
     def update_clusters(self, rep_data, max_iter=20):
         """
@@ -132,7 +132,7 @@ class DMLLoss(Loss):
         # cluster_means = cluster_examples.mean(1)
 
         # Compute squared distance of each example to each cluster centroid (euclid without the root)
-        sample_costs = self.euclidean_distance(self.centroids, r.unsqueeze(1).cuda())
+        sample_costs = self.calculate_distance(self.centroids, r.cuda())
 
         # Compute the two masks selecting the sample_costs related to each class(r)=class(cluster/rep)
         intra_cluster_mask = comparison_mask(classes, torch.from_numpy(self.cluster_classes).cuda())

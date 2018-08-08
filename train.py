@@ -85,6 +85,8 @@ def load_net(net_name):
         net = ResNetEncoder(emb_dim=512, fc_dim=None)
     elif net_name == 'resnet50_e512_fc512':
         net = ResNetEncoder(emb_dim=512, fc_dim=512)
+    elif net_name == 'resnet50_e1024_fc1024':
+        net = ResNetEncoder(emb_dim=1024, fc_dim=1024, norm=True)
     else:
         return None
     return net
@@ -135,7 +137,7 @@ def train(run_id,
 
     # Create loss object (this stores the cluster centroids)
     if loss_type == "magnet":
-        the_loss = MagnetLoss(train_y, k, m, d)
+        the_loss = MagnetLoss(train_y, k, m, d, measure='euclidean')
 
         # Initialise the embeddings/representations/clusters
         the_loss.update_clusters(initial_reps)
@@ -143,7 +145,7 @@ def train(run_id,
         # Setup the optimizer
         optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate)
     elif loss_type == "dml":
-        the_loss = DMLLoss(train_y, k, m, d)
+        the_loss = DMLLoss(train_y, k, m, d, measure='cosine')
 
         # Initialise the embeddings/representations/clusters
         the_loss.update_clusters(initial_reps)
@@ -237,12 +239,16 @@ def train(run_id,
         if iteration > 0 and not iteration % calc_acc_every:
             # calc all the accs
             train_reps = compute_reps(net, train_dataset, test_train_inds, chunk_size)
-            test_reps = compute_all_reps(net, test_dataset, chunk_size)
+            test_test_inds, _ = get_indexs(test_y, len(set(test_y)), 10)
+            test_reps = compute_reps(net, test_dataset, test_test_inds, chunk_size)
+            # test_reps = compute_all_reps(net, test_dataset, chunk_size)
 
-            test_accb = unsupervised_clustering_accuracy(test_reps, test_y)
+            # test_accb = unsupervised_clustering_accuracy(test_reps, test_y)
+            test_accb = unsupervised_clustering_accuracy(test_reps, test_y[test_test_inds])
             train_accb = unsupervised_clustering_accuracy(train_reps, train_y[test_train_inds])
 
-            test_acc = the_loss.calc_accuracy(test_reps, test_y)
+            # test_acc = the_loss.calc_accuracy(test_reps, test_y)
+            test_acc = the_loss.calc_accuracy(test_reps, test_y[test_test_inds])
             train_acc = the_loss.calc_accuracy(train_reps, train_y[test_train_inds])
 
             with open(save_path+'/log.txt', 'a') as f:
@@ -463,6 +469,9 @@ if __name__ == "__main__":
     # train('002', 'mnist', 'mnist_default', 'dml', m=8, d=8, k=3, alpha=1.0)
     # train('003', 'oxford_flowers', 'resnet50_e512', 'magnet', m=12, d=4, k=3, alpha=1.0)
     # train('004', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=1.0)
-    train('007b', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000)
+    # train('007b', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000)
+    # train('007c', 'oxford_flowers', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=5000) # norm=True
+    # train('007d', 'oxford_flowers', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=5000) # norm=False
+    train('007e', 'oxford_flowers', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000) # cosine dist
     # train('005', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=2.43)
-    # train('006', 'stanford_dogs', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=0.71)
+    # train('006c', 'stanford_dogs', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1, refresh_clusters_every=10000)

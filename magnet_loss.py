@@ -7,8 +7,8 @@ from loss import Loss
 
 class MagnetLoss(Loss):
     """Sample minibatches for magnet loss."""
-    def __init__(self, labels, k, m, d):
-        super().__init__(labels, k, m, d)
+    def __init__(self, labels, k, m, d, measure):
+        super().__init__(labels, k, m, d, measure)
 
     def update_clusters(self, rep_data, max_iter=20):
         """
