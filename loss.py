@@ -8,6 +8,9 @@ import numpy as np
 import torch
 from utils import ensure_tensor
 import torch.nn.functional as F
+from sklearn.utils import linear_assignment_
+from scipy.stats import itemfreq
+from sklearn.cluster import KMeans
 
 
 class Loss(object):
@@ -82,14 +85,14 @@ class Loss(object):
         """
         return c / self.k
 
-    def predict(self, rep_data):
+    def predict(self, x):
         """
         Predict the clusters that rep_data belongs to based on the clusters current positions
         :param rep_data:
         :return:
         """
         sc = self.calculate_distance(ensure_tensor(self.centroids).float().cuda(),
-                                     ensure_tensor(rep_data).float().cuda()).detach().cpu().numpy()
+                                     ensure_tensor(x).float().cuda()).detach().cpu().numpy()
 
 
         preds = np.argmin(sc, 1)  # calc closest clusters
@@ -100,17 +103,32 @@ class Loss(object):
             preds[p] = self.unique_classes[preds[p]]  # then convert into the actual class label
         return preds
 
-    def calc_accuracy(self, rep_data, y):
+    def calc_accuracy(self, x, y, stored_clusters=False):
         """
         Calculate the accuracy of reps based on the current clusters
         :param rep_data:
         :param y:
         :return:
         """
-        preds = self.predict(rep_data)
-        correct = preds == y
-        acc = correct.astype(float).mean()
-        return acc
+        if stored_clusters:
+            preds = self.predict(x)
+            correct = preds == y
+            return correct.astype(float).mean()
+        else:
+            k = np.unique(y).size
+            kmeans = KMeans(n_clusters=k, max_iter=35, n_init=15, n_jobs=-1).fit(x)
+            emb_labels = kmeans.labels_
+            G = np.zeros((k, k))
+            for i in range(k):
+                lbl = y[emb_labels == i]
+                uc = itemfreq(lbl)
+                for uu, cc in uc:
+                    G[i, uu] = -cc
+            A = linear_assignment_.linear_assignment(G)
+            acc = 0.0
+            for (cluster, best) in A:
+                acc -= G[cluster, best]
+            return acc / float(len(y))
 
     def loss(self, r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
         raise NotImplementedError
@@ -132,4 +150,13 @@ class Loss(object):
     @staticmethod
     def cosine_distance(x, y):
         return F.cosine_similarity(x.transpose(0, 1).unsqueeze(0), y.unsqueeze(2))
+
+
+def unsupervised_clustering_accuracy(emb, labels):
+    """
+    Calcs acc for set of embeddings but redoes kmeans for the number of classes in labels rather than the learnt clusters
+    :param emb:
+    :param labels:
+    :return:
+    """
 

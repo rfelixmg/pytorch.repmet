@@ -87,6 +87,10 @@ def load_net(net_name):
         net = ResNetEncoder(emb_dim=512, fc_dim=512)
     elif net_name == 'resnet50_e1024_fc1024':
         net = ResNetEncoder(emb_dim=1024, fc_dim=1024, norm=True)
+    elif net_name == 'resnet50_e1024_fc1024':
+        net = ResNetEncoder(emb_dim=1024, fc_dim=1024, norm=True)
+    elif net_name == 'resnet18_e1024_fc2048_pt':
+        net = ResNetEncoder(emb_dim=1024, fc_dim=2048, norm=True, pretrained=True)
     else:
         return None
     return net
@@ -145,7 +149,7 @@ def train(run_id,
         # Setup the optimizer
         optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate)
     elif loss_type == "dml":
-        the_loss = DMLLoss(train_y, k, m, d, measure='cosine')
+        the_loss = DMLLoss(train_y, k, m, d, measure='cosine')#'euclidean')
 
         # Initialise the embeddings/representations/clusters
         the_loss.update_clusters(initial_reps)
@@ -218,6 +222,7 @@ def train(run_id,
 
         # Get inputs and and labels from the dataset
         batch_x = get_inputs(train_dataset, batch_example_inds).cuda()
+        bx = ensure_numpy(batch_x)
         batch_y = torch.from_numpy(batch_class_inds).cuda()
 
         # Calc the outputs (embs) and then the loss + accs
@@ -241,15 +246,12 @@ def train(run_id,
             train_reps = compute_reps(net, train_dataset, test_train_inds, chunk_size)
             test_test_inds, _ = get_indexs(test_y, len(set(test_y)), 10)
             test_reps = compute_reps(net, test_dataset, test_test_inds, chunk_size)
-            # test_reps = compute_all_reps(net, test_dataset, chunk_size)
 
-            # test_accb = unsupervised_clustering_accuracy(test_reps, test_y)
-            test_accb = unsupervised_clustering_accuracy(test_reps, test_y[test_test_inds])
-            train_accb = unsupervised_clustering_accuracy(train_reps, train_y[test_train_inds])
+            test_acc = the_loss.calc_accuracy(test_reps, test_y[test_test_inds], stored_clusters=True)
+            train_acc = the_loss.calc_accuracy(train_reps, train_y[test_train_inds], stored_clusters=True)
 
-            # test_acc = the_loss.calc_accuracy(test_reps, test_y)
-            test_acc = the_loss.calc_accuracy(test_reps, test_y[test_test_inds])
-            train_acc = the_loss.calc_accuracy(train_reps, train_y[test_train_inds])
+            test_accb = the_loss.calc_accuracy(test_reps, test_y[test_test_inds], stored_clusters=False)
+            train_accb = the_loss.calc_accuracy(train_reps, train_y[test_train_inds], stored_clusters=False)
 
             with open(save_path+'/log.txt', 'a') as f:
                 f.write("Iteration %06d/%06d: Tr. L: %0.3f :: Batch. A: %0.3f :::: Tr. A: %0.3f :: Tr. A2: %0.3f :::: Te. A: %0.3f :: Te. A2: %0.3f\n" % (iteration, n_iterations, batch_loss, batch_acc, train_acc, train_accb, test_acc, test_accb))
@@ -299,7 +301,8 @@ def train(run_id,
             for i in range(len(cluster_classes)):
                 cluster_classes[i] = the_loss.unique_classes[cluster_classes[i]]
 
-            plot_train_emb = compute_reps(net, train_dataset, plot_sample_indexs, chunk_size=chunk_size)
+            # plot_train_emb = compute_reps(net, train_dataset, plot_sample_indexs, chunk_size=chunk_size)
+            plot_train_emb = compute_reps(net, train_dataset, test_train_inds, chunk_size=chunk_size)
             plot_test_emb = compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size)
 
             os.makedirs("%s/train-emb/" % plots_path, exist_ok=True)
@@ -322,7 +325,8 @@ def train(run_id,
                   savepath="%s/test-emb/i%06d%s" % (plots_path, iteration, plots_ext))
 
             graph(plot_train_emb,
-                  train_y[plot_sample_indexs],
+                  # train_y[plot_sample_indexs],
+                  train_y[test_train_inds],
                   cluster_centers=ensure_numpy(the_loss.centroids),
                   cluster_classes=the_loss.cluster_classes,
                   savepath="%s/train-emb-all/i%06d%s" % (plots_path, iteration, plots_ext))
@@ -466,12 +470,18 @@ if __name__ == "__main__":
     #       n_plot_classes=args.n_plot_classes)
 
     # train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=3, alpha=1.0)
-    # train('002', 'mnist', 'mnist_default', 'dml', m=8, d=8, k=3, alpha=1.0)
+    # train('001h', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=5, plot_every=5)
+    # train('002h', 'mnist', 'mnist_default', 'dml', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=5, plot_every=5)
     # train('003', 'oxford_flowers', 'resnet50_e512', 'magnet', m=12, d=4, k=3, alpha=1.0)
     # train('004', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=1.0)
     # train('007b', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000)
     # train('007c', 'oxford_flowers', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=5000) # norm=True
     # train('007d', 'oxford_flowers', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=5000) # norm=False
-    train('007e', 'oxford_flowers', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000) # cosine dist
+    # train('007e', 'oxford_flowers', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000) # cosine dist
+    # train('007f', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=10, calc_acc_every=5, plot_every=5) # cosine dist
+    # train('008f', 'oxford_flowers', 'resnet18_e1024_fc1024', 'dml', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=10, calc_acc_every=5, plot_every=5) # cosine dist
+    # train('008h', 'oxford_flowers', 'resnet18_e1024_fc1024', 'dml', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=5, plot_every=5, n_iterations=2000) # cosine dist
+    # train('007g', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=40, calc_acc_every=250, plot_every=500) # cosine dist
+    train('007j', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=200, calc_acc_every=10, plot_every=10, n_iterations=4000)
     # train('005', 'oxford_flowers', 'resnet50_e512', 'dml', m=12, d=4, k=3, alpha=2.43)
     # train('006c', 'stanford_dogs', 'resnet50_e1024_fc1024', 'dml', m=12, d=4, k=3, alpha=1, refresh_clusters_every=10000)

@@ -127,7 +127,7 @@ class MagnetLoss(Loss):
         cluster_means = cluster_examples.mean(1)
 
         # Compute squared distance of each example to each cluster centroid (euclid without the root)
-        sample_costs = self.euclidean_distance(cluster_means, r.unsqueeze(1))
+        sample_costs = self.calculate_distance(cluster_means, r)
 
         # Select distances of examples to their own centroid
         intra_cluster_mask = comparison_mask(clusters, torch.arange(n_clusters)).float()
@@ -136,7 +136,7 @@ class MagnetLoss(Loss):
         # Compute variance of intra-cluster distances
         N = r.shape[0]
         variance = intra_cluster_costs.sum() / float((N - 1))
-        var_normalizer = -1 / (2 * variance ** 2)
+        var_normalizer = -1 / (2 * variance)  # squaring the variance pushed all of the samples away from centroids within a few iterations
 
         # Compute numerator
         numerator = torch.exp(var_normalizer * intra_cluster_costs - alpha)

@@ -5,7 +5,7 @@ import torch.nn as nn
 from sklearn.cluster import KMeans
 
 from loss import Loss
-from utils import ensure_tensor
+from utils import ensure_tensor, ensure_numpy
 
 class DMLLoss(Loss):
 
@@ -37,7 +37,6 @@ class DMLLoss(Loss):
             self.assignments[class_mask] = self.get_cluster_ind(c, kmeans.predict(class_examples))
 
         # make leaf variable after editing it then wrap in param
-        # TODO see if it works without the param wrap
         self.centroids = nn.Parameter(torch.cuda.FloatTensor(self.centroids).requires_grad_())
 
         # Construct a map from cluster to example indexes for fast batch creation (the opposite of assignmnets)
@@ -126,32 +125,35 @@ class DMLLoss(Loss):
             return torch.eq(a_labels.unsqueeze(1),
                             b_labels.unsqueeze(0))
 
-        # Take cluster means within the batch
-        # tf.dynamic_partition used clusters which is just an array we create in minibatch_magnet_loss, so can just reshape
-        # cluster_examples = r.view(n_clusters, int(float(r.shape[0])/float(n_clusters)), r.shape[1])
-        # cluster_means = cluster_examples.mean(1)
-
-        # Compute squared distance of each example to each cluster centroid (euclid without the root)
+        # Compute distance of each example to each cluster centroid (euclid without the root)
         sample_costs = self.calculate_distance(self.centroids, r.cuda())
 
         # Compute the two masks selecting the sample_costs related to each class(r)=class(cluster/rep)
         intra_cluster_mask = comparison_mask(classes, torch.from_numpy(self.cluster_classes).cuda())
         intra_cluster_mask_op = ~intra_cluster_mask
 
-        # Compute the costs, we only want to take the min of the closest r to it's corresponding cluster/rep
+        # Calculate the minimum distance to rep of different class
+        # therefore we make all values for correct clusters bigger so they are ignored..
+        intra_cluster_costs_ignore_op = (intra_cluster_mask.float() * (sample_costs.max() * 1.5))
+        intra_cluster_costs_desired_op = intra_cluster_mask_op.float() * sample_costs
+        intra_cluster_costs_together_op = intra_cluster_costs_ignore_op + intra_cluster_costs_desired_op
+        min_non_match, _ = intra_cluster_costs_together_op.min(1)
+
+        # Calculate the minimum distance to rep of same class
         # therefore we make all values for other clusters bigger so they are ignored..
         intra_cluster_costs_ignore = (intra_cluster_mask_op.float() * (sample_costs.max() * 1.5))
         intra_cluster_costs_desired = intra_cluster_mask.float() * sample_costs
         intra_cluster_costs_together = intra_cluster_costs_ignore + intra_cluster_costs_desired
-        intra_cluster_costs, _ = intra_cluster_costs_together.min(1)
+        min_match, _ = intra_cluster_costs_together.min(1)
 
         # Compute variance of intra-cluster distances
         N = r.shape[0]
-        variance = intra_cluster_costs.sum() / float((N - 1))
-        var_normalizer = -1 / (2 * variance**2)
+        variance = min_match.sum() / float((N - 1))
+        var_normalizer = -1 / (2 * variance)
+        # var_normalizer = -1 / (2 * 0.5**2)  # hard code 0.5 [as suggested in paper] but seems to now work as well as the calculated variance in my exp
 
         # Compute numerator
-        numerator = torch.exp(var_normalizer * intra_cluster_costs - alpha)
+        numerator = torch.exp(var_normalizer * min_match)
 
         # Compute denominator
         # diff_class_mask = tf.to_float(tf.logical_not(comparison_mask(classes, cluster_classes)))
@@ -161,7 +163,14 @@ class DMLLoss(Loss):
 
         # Compute example losses and total loss
         epsilon = 1e-8
-        losses = F.relu(-torch.log(numerator / (denominator + epsilon) + epsilon))
+        losses_eq4 = F.relu(min_match - min_non_match + alpha)
+        # total_loss_eq4 = losses_eq4.mean()
+
+        # Compute example losses and total loss
+        losses_eq5 = F.relu(-torch.log(numerator / (denominator + epsilon) + epsilon) + alpha)
+        # total_loss_eq5 = losses_eq5.mean()
+
+        losses = losses_eq5#losses_eq4 + losses_eq5
         total_loss = losses.mean()
 
         _, preds = sample_costs.min(1)

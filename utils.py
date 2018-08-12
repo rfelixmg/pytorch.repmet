@@ -241,30 +241,6 @@ def compute_rand_index(emb, labels):
     return float(agreements) / (n * (n - 1) / 2)
 
 
-def unsupervised_clustering_accuracy(emb, labels):
-    """
-    Calcs acc for set of embeddings but redoes kmeans for the number of classes in labels rather than the learnt clusters
-    :param emb:
-    :param labels:
-    :return:
-    """
-
-    k = np.unique(labels).size
-    kmeans = KMeans(n_clusters=k, max_iter=35, n_init=15, n_jobs=-1).fit(emb)
-    emb_labels = kmeans.labels_
-    G = np.zeros((k, k))
-    for i in range(k):
-        lbl = labels[emb_labels == i]
-        uc = itemfreq(lbl)
-        for uu, cc in uc:
-            G[i, uu] = -cc
-    A = linear_assignment_.linear_assignment(G)
-    acc = 0.0
-    for (cluster, best) in A:
-        acc -= G[cluster, best]
-    return acc / float(len(labels))
-
-
 # Type changing
 def ensure_numpy(x):
     if type(x).__module__ == np.__name__:
