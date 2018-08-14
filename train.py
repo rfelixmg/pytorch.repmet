@@ -183,8 +183,15 @@ def train(run_id,
         batch_losses = state['batch_losses']
         train_accs = state['train_accs']
         test_accs = state['test_accs']
-        test_accb = state['test_accb']
-        train_accb = state['train_accb']
+
+        test_acc = test_accs[0][-1]
+        train_acc = train_accs[0][-1]
+        test_acc_b = test_accs[1][-1]
+        train_acc_b = train_accs[1][-1]
+        test_acc_c = test_accs[2][-1]
+        train_acc_c = train_accs[2][-1]
+        test_acc_d = test_accs[3][-1]
+        train_acc_d = train_accs[3][-1]
     else:
 
         # Randomly sample the classes then the samples from each class to plot
@@ -196,8 +203,14 @@ def train(run_id,
         test_accs = [[],[],[],[]]
         start_iteration = 0
         best_acc = 0
-        test_accb = 0
-        train_accb = 0
+        test_acc = 0
+        train_acc = 0
+        test_acc_b = 0
+        train_acc_b = 0
+        test_acc_c = 0
+        train_acc_c = 0
+        test_acc_d = 0
+        train_acc_d = 0
 
     # lets plot the initial embeddings
     cluster_classes = the_loss.cluster_classes
@@ -222,6 +235,7 @@ def train(run_id,
     test_train_inds,_ = get_indexs(train_y, len(set(train_y)), 10)
 
     # Lets setup the training loop
+    iteration = None
     for iteration in range(start_iteration, n_iterations):
         # Sample batch and do forward-backward
         batch_example_inds, batch_class_inds = the_loss.gen_batch()
@@ -355,9 +369,21 @@ def train(run_id,
                   savepath="%s/test-emb-all/i%06d%s" % (plots_path, iteration, plots_ext))
 
             plot_smooth({'loss': batch_losses,
-                         'train acc': train_accs,
-                         'test acc': test_accs},
-                        savepath="%s/loss%s" % (plots_path, plots_ext))
+                         'train acc': train_accs[0],
+                         'test acc': test_accs[0]},
+                        savepath="%s/loss_simple%s" % (plots_path, plots_ext))
+            plot_smooth({'loss': batch_losses,
+                         'train acc': train_accs[1],
+                         'test acc': test_accs[1]},
+                        savepath="%s/loss_magnet%s" % (plots_path, plots_ext))
+            plot_smooth({'loss': batch_losses,
+                         'train acc': train_accs[2],
+                         'test acc': test_accs[2]},
+                        savepath="%s/loss_repmet%s" % (plots_path, plots_ext))
+            plot_smooth({'loss': batch_losses,
+                         'train acc': train_accs[3],
+                         'test acc': test_accs[3]},
+                        savepath="%s/loss_unsupervised%s" % (plots_path, plots_ext))
 
             plot_cluster_data(the_loss.cluster_losses,
                               the_loss.cluster_classes,
@@ -424,10 +450,10 @@ def train(run_id,
     final_reps = compute_reps(net, train_dataset, plot_sample_indexs, chunk_size=chunk_size)
     graph(final_reps, train_y[plot_sample_indexs], savepath="%s/emb-final%s" % (plots_path, plots_ext))
 
-    if save_path:
-        if test_accb > best_acc:
+    if save_path and iteration:
+        if test_acc_d > best_acc:
             print("Saving model (is best): %s/i%06d%s" % (save_path, iteration, '.pth'))
-            best_acc = test_accb
+            best_acc = test_acc_d
         else:
             print("Saving model: %s/i%06d%s" % (save_path, iteration, '.pth'))
 
@@ -435,7 +461,7 @@ def train(run_id,
             'iteration': iteration,
             'state_dict': net.state_dict(),
             'optimizer': optimizer.state_dict(),
-            'acc': test_accb,
+            'acc': test_acc_d,
             'best_acc': best_acc,
             'the_loss': the_loss,
             'plot_sample_indexs': plot_sample_indexs,
@@ -445,8 +471,6 @@ def train(run_id,
             'batch_losses': batch_losses,
             'train_accs': train_accs,
             'test_accs': test_accs,
-            'test_accb': test_accb,
-            'train_accb': train_accb
         }
         torch.save(state, "%s/i%06d%s" % (save_path, iteration, '.pth'))
 
@@ -498,7 +522,7 @@ if __name__ == "__main__":
     #       n_plot_samples=args.n_plot_samples,
     #       n_plot_classes=args.n_plot_classes)
 
-    # train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('001_del', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('001_k3', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
@@ -509,7 +533,7 @@ if __name__ == "__main__":
     # train('004-10000_r50', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
     # train('004-10000_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
     # train('004_del', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=3000)
-    train('004_del_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=3000)
+    # train('004_del_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=3000)
     # train('005_k1', 'oxford_flowers', 'inceptionv3_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
     # train('004_k1', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
 

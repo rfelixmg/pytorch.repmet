@@ -46,6 +46,9 @@ def plot_smooth(history_dict, savepath=None):
     ax1.tick_params('y')
     ax2.set_ylabel('Acc')
     ax2.tick_params('y')
+    ax2.grid(True, axis='y')
+    ax2.set_ybound(upper=1)
+    ax2.set_ybound(lower=0)
 
     fig.tight_layout()
 
@@ -146,7 +149,6 @@ def graph(vectors, labels, cluster_centers=None, cluster_classes=None, savepath=
 
     # plt.figure(figsize=(6, 5))
     plt.figure()
-    # plt.ylim(ymin=-0.2, ymax=0.2)
     # plt.xlim(xmin=-0.2, xmax=0.2)
 
     clss = list(set(labels))
