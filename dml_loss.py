@@ -9,10 +9,10 @@ from utils import ensure_tensor, ensure_numpy
 
 class DMLLoss(Loss):
 
-    def __init__(self, labels, k, m, d, measure):
-        super().__init__(labels, k, m, d, measure)
+    def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
+        super().__init__(set_y, k, m, d, measure, alpha)
 
-    def update_clusters(self, rep_data, max_iter=20):
+    def update_clusters(self, set_x, max_iter=20):
         """
         Given an array of representations for the entire training set,
         recompute clusters and store example cluster assignments in a
@@ -20,11 +20,11 @@ class DMLLoss(Loss):
         """
         # Lazily allocate tensor for centroids
         if self.centroids is None:
-            self.centroids = np.zeros([self.num_classes * self.k, rep_data.shape[1]])
+            self.centroids = np.zeros([self.num_classes * self.k, set_x.shape[1]])
 
         for c in range(self.num_classes):
-            class_mask = self.labels == self.unique_classes[c]  # build true/false mask for classes to allow us to extract them
-            class_examples = rep_data[class_mask]  # extract the embds for this class
+            class_mask = self.set_y == self.unique_y[c]  # build true/false mask for classes to allow us to extract them
+            class_examples = set_x[class_mask]  # extract the embds for this class
             kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
             kmeans.fit(class_examples)  # run kmeans putting k clusters per class
 
@@ -40,9 +40,9 @@ class DMLLoss(Loss):
         self.centroids = nn.Parameter(torch.cuda.FloatTensor(self.centroids).requires_grad_())
 
         # Construct a map from cluster to example indexes for fast batch creation (the opposite of assignmnets)
-        for cluster in range(self.k * self.num_classes):
-            cluster_mask = self.assignments == cluster
-            self.cluster_assignments[cluster] = np.flatnonzero(cluster_mask)
+        for cluster_index in range(self.k * self.num_classes):
+            cluster_mask = self.assignments == cluster_index
+            self.cluster_assignments[cluster_index] = np.flatnonzero(cluster_mask)
 
     def gen_batch(self):
         """
@@ -57,47 +57,37 @@ class DMLLoss(Loss):
         # Sample seed cluster proportionally to cluster losses if available
         if self.cluster_losses is not None:
             p = self.cluster_losses / np.sum(self.cluster_losses)
-            seed_cluster = np.random.choice(self.num_classes * self.k, p=p)
+            seed_cluster_index = np.random.choice(self.num_classes * self.k, p=p)
         else:
-            seed_cluster = np.random.choice(self.num_classes * self.k)
+            seed_cluster_index = np.random.choice(self.num_classes * self.k)
 
         # Get imposter clusters by ranking centroids by distance
-        sq_dists = ((self.centroids[seed_cluster] - self.centroids) ** 2).sum(1).detach().cpu().numpy()
+        sq_dists = ensure_numpy(((self.centroids[seed_cluster_index] - self.centroids) ** 2).sum(1))
 
         # Assure only clusters of different class from seed are chosen
         # added the int condition as it was returning float and picking up seed_cluster
-        sq_dists[int(self.get_class_ind(seed_cluster)) == self.cluster_classes] = np.inf
+        sq_dists[int(self.get_class_ind(seed_cluster_index)) == self.cluster_classes] = np.inf
 
         # Get top m-1 (closest) impostor clusters and add seed cluster too
-        clusters = np.argpartition(sq_dists, self.m - 1)[:self.m - 1]
-        clusters = np.concatenate([[seed_cluster], clusters])
+        cluster_indexs = np.argpartition(sq_dists, self.m - 1)[:self.m - 1]
+        cluster_indexs = np.concatenate([[seed_cluster_index], cluster_indexs])
 
         # Sample d examples uniformly from m clusters
         batch_indexes = np.empty([self.m * self.d], int)
-        for i, c in enumerate(clusters):
-            x = np.random.choice(self.cluster_assignments[c], self.d, replace=True)  # if clusters have less than d samples we need to allow repick
+        for i, ci in enumerate(cluster_indexs):
+            x = np.random.choice(self.cluster_assignments[ci], self.d, replace=True)  # if clusters have less than d samples we need to allow repick
             # x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
             start = i * self.d
             stop = start + self.d
             batch_indexes[start:stop] = x
 
         # Get classes for the clusters
-        class_inds = self.cluster_classes[clusters]
-        # batch_class_inds = []
-        # inds_map = {}
-        # class_count = 0
-        # for c in class_inds:
-        #     if c not in inds_map:
-        #         inds_map[c] = class_count
-        #         class_count += 1
-        #     batch_class_inds.append(inds_map[c])
+        class_inds = self.cluster_classes[cluster_indexs]
 
-
-        # return batch_indexes, np.repeat(batch_class_inds, self.d)
         return batch_indexes, np.repeat(class_inds, self.d)
 
-    def loss(self, r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
-        """Compute magnet loss.
+    def loss(self, x, y):
+        """Compute repmet loss.
 
         Given a tensor of features `r`, the assigned class for each example,
         the assigned cluster for each example, the assigned class for each
@@ -120,16 +110,12 @@ class DMLLoss(Loss):
             losses: The loss for each example in the batch.
             acc: The predictive accuracy of the batch
         """
-        # Helper to compute boolean mask for distance comparisons
-        def comparison_mask(a_labels, b_labels):
-            return torch.eq(a_labels.unsqueeze(1),
-                            b_labels.unsqueeze(0))
 
         # Compute distance of each example to each cluster centroid (euclid without the root)
-        sample_costs = self.calculate_distance(self.centroids, r.cuda())
+        sample_costs = self.calculate_distance(self.centroids, x)
 
         # Compute the two masks selecting the sample_costs related to each class(r)=class(cluster/rep)
-        intra_cluster_mask = comparison_mask(classes, torch.from_numpy(self.cluster_classes).cuda())
+        intra_cluster_mask = self.comparison_mask(y, torch.from_numpy(self.cluster_classes).cuda())
         intra_cluster_mask_op = ~intra_cluster_mask
 
         # Calculate the minimum distance to rep of different class
@@ -147,27 +133,27 @@ class DMLLoss(Loss):
         min_match, _ = intra_cluster_costs_together.min(1)
 
         # Compute variance of intra-cluster distances
-        N = r.shape[0]
+        N = x.shape[0]
         variance = min_match.sum() / float((N - 1))
+        # variance = 0.5  # hard code 0.5 [as suggested in paper] but seems to now work as well as the calculated variance in my exp
         var_normalizer = -1 / (2 * variance)
-        # var_normalizer = -1 / (2 * 0.5**2)  # hard code 0.5 [as suggested in paper] but seems to now work as well as the calculated variance in my exp
 
         # Compute numerator
         numerator = torch.exp(var_normalizer * min_match)
 
         # Compute denominator
         # diff_class_mask = tf.to_float(tf.logical_not(comparison_mask(classes, cluster_classes)))
-        diff_class_mask = (intra_cluster_mask_op).float()
+        diff_class_mask = intra_cluster_mask_op.float()
         denom_sample_costs = torch.exp(var_normalizer * sample_costs)
         denominator = (diff_class_mask.cuda() * denom_sample_costs).sum(1)
 
         # Compute example losses and total loss
         epsilon = 1e-8
-        losses_eq4 = F.relu(min_match - min_non_match + alpha)
+        losses_eq4 = F.relu(min_match - min_non_match + self.alpha)
         # total_loss_eq4 = losses_eq4.mean()
 
         # Compute example losses and total loss
-        losses_eq5 = F.relu(-torch.log(numerator / (denominator + epsilon) + epsilon) + alpha)
+        losses_eq5 = F.relu(-torch.log(numerator / (denominator + epsilon) + epsilon) + self.alpha)
         # total_loss_eq5 = losses_eq5.mean()
 
         losses = losses_eq5#losses_eq4 + losses_eq5
@@ -175,38 +161,8 @@ class DMLLoss(Loss):
 
         _, preds = sample_costs.min(1)
         preds = ensure_tensor(self.cluster_classes[preds]).cuda()  # convert from cluster ids to class ids
-        acc = torch.eq(classes, preds).float().mean()
+        acc = torch.eq(y, preds).float().mean()
 
         return total_loss, losses, acc
 
-
-    def minibatch_loss(self, r, classes, m, d, alpha=1.0):
-        """Compute minibatch magnet loss.
-
-        Given a batch of features `r` consisting of `m` clusters each with `d`
-        consecutive examples, the corresponding class labels for each example
-        and a cluster separation gap `alpha`, compute the total magnet loss and
-        the per example losses. This is a thin wrapper around `magnet_loss`
-        that assumes this particular batch structure to implement minibatch
-        magnet loss according to equation (5) in
-        http://arxiv.org/pdf/1511.05939v2.pdf. The correct stochastic approximation
-        should also follow the cluster sampling procedure presented in section
-        3.2 of the paper.
-
-        Args:
-            r: A batch of features.
-            classes: Class labels for each example.
-            m: The number of clusters in the batch.
-            d: The number of examples in each cluster.
-            alpha: The cluster separation gap hyperparameter.
-
-        Returns:
-            total_loss: The total magnet loss for the batch.
-            losses: The loss for each example in the batch.
-        """
-        # clusters = np.repeat(np.arange(m, dtype=np.int32), d)
-        clusters = torch.arange(m).unsqueeze(1).repeat(1, d).view(m*d)
-        cluster_classes = classes.view(m, d)[:, 0]
-
-        return self.loss(r, classes, clusters, cluster_classes, m, alpha)
 

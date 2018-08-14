@@ -15,15 +15,16 @@ from sklearn.cluster import KMeans
 
 class Loss(object):
     """Sample minibatches for magnet loss."""
-    def __init__(self, labels, k, m, d, measure='euclidean'):
+    def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
 
-        self.unique_classes = np.unique(labels)
-        self.num_classes = self.unique_classes.shape[0]
-        self.labels = labels
+        self.unique_y = np.sort(np.unique(set_y))
+        self.num_classes = self.unique_y.shape[0]
+        self.set_y = set_y
 
         self.k = k
         self.m = m
         self.d = d
+        self.alpha = alpha
 
         if measure == 'euclidean':
             self.calculate_distance = self.euclidean_distance
@@ -31,9 +32,9 @@ class Loss(object):
             self.calculate_distance = self.cosine_distance
 
         self.centroids = None
-        self.assignments = np.zeros_like(labels, int)
+        self.assignments = np.zeros_like(set_y, int)
         self.cluster_assignments = {}
-        self.cluster_classes = np.repeat(range(self.num_classes), k)
+        self.cluster_classes = np.repeat(self.unique_y, k)
         self.example_losses = None
         self.cluster_losses = None
         self.has_loss = None
@@ -48,9 +49,9 @@ class Loss(object):
         """
         # Lazily allocate structures for losses
         if self.example_losses is None:
-            self.example_losses = np.zeros_like(self.labels, float)
+            self.example_losses = np.zeros_like(self.set_y, float)
             self.cluster_losses = np.zeros([self.k * self.num_classes], float)
-            self.has_loss = np.zeros_like(self.labels, bool)
+            self.has_loss = np.zeros_like(self.set_y, bool)
 
         # Update example losses
         indexes = np.array(indexes)  # these are sample indexs in the dataset, relating to the batch this is called on
@@ -58,16 +59,16 @@ class Loss(object):
         self.has_loss[indexes] = losses  # set booleans
 
         # Find affected clusters and update the corresponding cluster losses
-        clusters = np.unique(self.assignments[indexes])  # what clusters are these batch samples a part of?
-        for cluster in clusters:  # for each cluster
-            cluster_inds = self.assignments == cluster  # what samples are in this cluster?
-            cluster_example_losses = self.example_losses[cluster_inds]  # for the samples in this cluster what are their losses
+        cluster_indexs = np.unique(self.assignments[indexes])  # what clusters are these batch samples a part of?
+        for cluster_index in cluster_indexs:  # for each cluster
+            cluster_example_indexs = self.assignments == cluster_index  # what samples are in this cluster?
+            cluster_example_losses = self.example_losses[cluster_example_indexs]  # for the samples in this cluster what are their losses
 
             # Take the average loss in the cluster of examples for which we have measured a loss
-            if len(cluster_example_losses[self.has_loss[cluster_inds]]) > 0:
-                self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds]])  # set the loss of this cluster of the mean if the losses exist
+            if len(cluster_example_losses[self.has_loss[cluster_example_indexs]]) > 0:
+                self.cluster_losses[cluster_index] = np.mean(cluster_example_losses[self.has_loss[cluster_example_indexs]])  # set the loss of this cluster of the mean if the losses exist
             else:
-                self.cluster_losses[cluster] = 0
+                self.cluster_losses[cluster_index] = 0
 
     def gen_batch(self):
         raise NotImplementedError
@@ -87,7 +88,7 @@ class Loss(object):
 
     def predict(self, x):
         """
-        Predict the clusters that rep_data belongs to based on the clusters current positions
+        Predict the clusters that x belongs to based on the clusters current positions
         :param rep_data:
         :return:
         """
@@ -99,8 +100,7 @@ class Loss(object):
 
         # at this point the preds are the cluster indexs, so need to get classes
         for p in range(len(preds)):
-            preds[p] = self.cluster_classes[preds[p]]  # first change to cluster index
-            preds[p] = self.unique_classes[preds[p]]  # then convert into the actual class label
+            preds[p] = self.cluster_classes[preds[p]]  # convert into the actual class label
         return preds
 
     def calc_accuracy(self, x, y, stored_clusters=False):
@@ -130,10 +130,7 @@ class Loss(object):
                 acc -= G[cluster, best]
             return acc / float(len(y))
 
-    def loss(self, r, classes, clusters, cluster_classes, n_clusters, alpha=1.0):
-        raise NotImplementedError
-
-    def minibatch_loss(self, r, classes, m, d, alpha=1.0):
+    def loss(self, x, y):
         raise NotImplementedError
 
     # @staticmethod
@@ -150,6 +147,12 @@ class Loss(object):
     @staticmethod
     def cosine_distance(x, y):
         return F.cosine_similarity(x.transpose(0, 1).unsqueeze(0), y.unsqueeze(2))
+
+    @staticmethod
+    # Helper to compute boolean mask for distance comparisons
+    def comparison_mask(a_labels, b_labels):
+        return torch.eq(a_labels.unsqueeze(1),
+                        b_labels.unsqueeze(0))
 
 
 def unsupervised_clustering_accuracy(emb, labels):

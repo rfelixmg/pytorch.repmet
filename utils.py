@@ -146,9 +146,13 @@ def graph(vectors, labels, cluster_centers=None, cluster_classes=None, savepath=
 
     # plt.figure(figsize=(6, 5))
     plt.figure()
-    colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', 'gray', 'orange', 'purple']
+    # plt.ylim(ymin=-0.2, ymax=0.2)
+    # plt.xlim(xmin=-0.2, xmax=0.2)
 
     clss = list(set(labels))
+
+    cmap = plt.get_cmap('jet')
+    colors = cmap(np.linspace(0, 1.0, len(clss)))
     for i in range(len(labels)):
         if i < (len(vectors)-len(cluster_classes)):
             plt.scatter(vectors[i, 0],
