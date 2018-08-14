@@ -149,30 +149,33 @@ class MagnetLoss(Loss):
 
         return total_loss, losses, acc
 
-    def calc_accuracy(self, x, y, stored_clusters=False):
-        L = 128
-
-        variance = self.avg_variance
-        var_normalizer = -1 / (2 * variance)
-
-        # Compute squared distance of each example to each cluster centroid (euclid without the root)
-        sample_costs = self.calculate_distance(ensure_tensor(self.centroids).cuda().float(),
-                                               ensure_tensor(x).cuda().float())
-
-        # apply exp and variance normalisation
-        sample_costs = torch.exp(var_normalizer * sample_costs)
-
-        denominator = torch.sum(sample_costs, dim=1)
-
-        sample_costs = sample_costs.view(-1, self.num_classes, self.k)
-        numerator = torch.sum(sample_costs, dim=2)
-
-        # Compute example losses and total loss
-        epsilon = 1e-8
-        # _, ind = torch.max((numerator / (denominator + epsilon) + epsilon))
-        _, ind = torch.max(numerator, 1)
-
-        pred = self.cluster_classes[ind*self.k] # get cluster class id, based on index, *k to make up index from summing over k
-        acc = np.mean(np.equal(y, pred).astype(float))
-
-        return acc
+    # def calc_accuracy(self, x, y, stored_clusters=False):
+    #     L = 128
+    #
+    #     variance = self.avg_variance
+    #     var_normalizer = -1 / (2 * variance)
+    #
+    #     # Compute squared distance of each example to each cluster centroid (euclid without the root)
+    #     sample_costs = self.calculate_distance(ensure_tensor(self.centroids).cuda().float(),
+    #                                            ensure_tensor(x).cuda().float())
+    #
+    #     # apply exp and variance normalisation
+    #     sample_costs = torch.exp(var_normalizer * sample_costs)
+    #
+    #     denominator = torch.sum(sample_costs, dim=1, keepdim=True)
+    #
+    #     sample_costs = sample_costs.view(-1, self.num_classes, self.k)
+    #     numerator = torch.sum(sample_costs, dim=2)
+    #     denominator = denominator.expand(-1, numerator.shape[1])
+    #
+    #     # Compute example losses and total loss
+    #     epsilon = 1e-8
+    #     probs = numerator / (denominator + epsilon) + epsilon
+    #
+    #     _, ind = torch.max(probs, 1)
+    #     # _, ind = torch.max(numerator, 1)
+    #
+    #     pred = self.cluster_classes[ind*self.k] # get cluster class id, based on index, *k to make up index from summing over k
+    #     acc = np.mean(np.equal(y, pred).astype(float))
+    #
+    #     return acc

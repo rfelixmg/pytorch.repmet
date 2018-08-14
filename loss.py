@@ -6,7 +6,7 @@ https://github.com/pumpikano/tf-magnet-loss
 
 import numpy as np
 import torch
-from utils import ensure_tensor
+from utils import ensure_tensor, ensure_numpy
 import torch.nn.functional as F
 from sklearn.utils import linear_assignment_
 from scipy.stats import itemfreq
@@ -38,6 +38,7 @@ class Loss(object):
         self.example_losses = None
         self.cluster_losses = None
         self.has_loss = None
+        self.avg_variance = None
 
     def update_clusters(self, rep_data, max_iter=20):
         raise NotImplementedError
@@ -86,35 +87,94 @@ class Loss(object):
         """
         return c / self.k
 
-    def predict(self, x):
+    def predict(self, x, method='simple'):
         """
         Predict the clusters that x belongs to based on the clusters current positions
-        :param rep_data:
+        :param x:
         :return:
         """
-        sc = self.calculate_distance(ensure_tensor(self.centroids).float().cuda(),
-                                     ensure_tensor(x).float().cuda()).detach().cpu().numpy()
+        # Compute squared distance of each example to each cluster centroid (euclid without the root)
+        sample_costs = self.calculate_distance(ensure_tensor(self.centroids).cuda().float(),
+                                               ensure_tensor(x).cuda().float())
 
+        if method == 'simple':
+            # Hey why not just take the closest cluster from the training
+            scores, cluster_indexs = torch.min(sample_costs, 1)
 
-        preds = np.argmin(sc, 1)  # calc closest clusters
+        elif method == 'repmet':
+            # From RepNet paper
+            # Is equivalent to magnet when variance is the same (just doesn't first calc as probability distribution)
 
-        # at this point the preds are the cluster indexs, so need to get classes
-        for p in range(len(preds)):
-            preds[p] = self.cluster_classes[preds[p]]  # convert into the actual class label
-        return preds
+            variance = 0.5  # having as 0.5 rather than a big self.avg_variance causes all costs to be 0 after the exp
+            var_normalizer = -1 / (2 * variance)
 
-    def calc_accuracy(self, x, y, stored_clusters=False):
+            # apply exp and variance normalisation
+            sample_costs = torch.exp(var_normalizer * sample_costs)
+
+            sample_costs = sample_costs.view(-1, self.num_classes, self.k)
+            numerator = torch.sum(sample_costs, dim=2)
+
+            scores, cluster_indexs = torch.max(numerator, 1)
+            cluster_indexs = cluster_indexs * self.k
+
+        elif method == 'magnet':
+            # From the magnet loss paper
+            # Is equivalent to simple when k=1
+            # otherwise makes decision based on sum of dists per class if such clusters are within the top L
+
+            L = 128  # maybe let parse in as arg, not crucial
+            if self.avg_variance:
+                variance = self.avg_variance
+            else:
+                variance = 0.5
+            var_normalizer = -1 / (2 * variance)
+
+            if L < sample_costs.shape[1]:
+                # generate mask for closest L clusters or all if # clusters is less than L
+                sortd, _ = sample_costs.sort(1)
+                maxs = sortd[:, L]
+                maxs = maxs.unsqueeze(1)
+                mask = torch.zeros_like(sample_costs)
+                mask[sample_costs < maxs] = 1
+            else:
+                mask = torch.ones_like(sample_costs)  # ie basically no mask :P
+
+            # apply exp and variance normalisation
+            sample_costs = torch.exp(var_normalizer * sample_costs)
+
+            # apply the mask after the exp but before the summings
+            sample_costs = sample_costs * mask
+
+            denominator = torch.sum(sample_costs, dim=1, keepdim=True)
+
+            sample_costs = sample_costs.view(-1, self.num_classes, self.k)
+            numerator = torch.sum(sample_costs, dim=2)
+            denominator = denominator.expand(-1, numerator.shape[1])
+
+            # Compute example losses and total loss
+            epsilon = 1e-8
+            probs = numerator / (denominator + epsilon) + epsilon
+
+            scores, cluster_indexs = torch.max(probs, 1)
+            cluster_indexs = cluster_indexs * self.k
+
+        # Convert from cluster indexs to class labels
+        predictions = self.cluster_classes[cluster_indexs]
+
+        return predictions
+
+    def calc_accuracy(self, x, y, method='repmet'):
         """
         Calculate the accuracy of reps based on the current clusters
-        :param rep_data:
+        :param x:
         :param y:
+        :param method:
         :return:
         """
-        if stored_clusters:
-            preds = self.predict(x)
-            correct = preds == y
-            return correct.astype(float).mean()
-        else:
+
+        if method == 'unsupervised':
+            # Tries finding a cluster for each class, and then assigns cluster labels to each cluster based on the max
+            # samples of a particular class in that cluster
             k = np.unique(y).size
             kmeans = KMeans(n_clusters=k, max_iter=35, n_init=15, n_jobs=-1).fit(x)
             emb_labels = kmeans.labels_
@@ -129,6 +189,10 @@ class Loss(object):
             for (cluster, best) in A:
                 acc -= G[cluster, best]
             return acc / float(len(y))
+        else:
+            predictions = self.predict(x, method=method)
+            correct = predictions == y
+            return correct.astype(float).mean()
 
     def loss(self, x, y):
         raise NotImplementedError
@@ -153,13 +217,3 @@ class Loss(object):
     def comparison_mask(a_labels, b_labels):
         return torch.eq(a_labels.unsqueeze(1),
                         b_labels.unsqueeze(0))
-
-
-def unsupervised_clustering_accuracy(emb, labels):
-    """
-    Calcs acc for set of embeddings but redoes kmeans for the number of classes in labels rather than the learnt clusters
-    :param emb:
-    :param labels:
-    :return:
-    """
-

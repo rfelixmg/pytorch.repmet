@@ -7,7 +7,7 @@ from sklearn.cluster import KMeans
 from loss import Loss
 from utils import ensure_tensor, ensure_numpy
 
-class DMLLoss(Loss):
+class RepMetLoss(Loss):
 
     def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
         super().__init__(set_y, k, m, d, measure, alpha)
@@ -164,5 +164,6 @@ class DMLLoss(Loss):
         acc = torch.eq(y, preds).float().mean()
 
         return total_loss, losses, acc
+
 
 
