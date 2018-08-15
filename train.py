@@ -401,9 +401,9 @@ def train(run_id,
 
         if iteration > 0 and not iteration % save_every:
             if save_path:
-                if test_accb > best_acc:
+                if test_acc_d > best_acc:
                     print("Saving model (is best): %s/i%06d%s" % (save_path, iteration, '.pth'))
-                    best_acc = test_accb
+                    best_acc = test_acc_d
                 else:
                     print("Saving model: %s/i%06d%s" % (save_path, iteration, '.pth'))
 
@@ -411,7 +411,7 @@ def train(run_id,
                     'iteration': iteration,
                     'state_dict': net.state_dict(),
                     'optimizer': optimizer.state_dict(),
-                    'acc': test_accb,
+                    'acc': test_acc_d,
                     'best_acc': best_acc,
                     'the_loss': the_loss,
                     'plot_sample_indexs': plot_sample_indexs,
@@ -421,8 +421,6 @@ def train(run_id,
                     'batch_losses': batch_losses,
                     'train_accs': train_accs,
                     'test_accs': test_accs,
-                    'test_accb': test_accb,
-                    'train_accb': train_accb
                 }
                 torch.save(state, "%s/i%06d%s" % (save_path, iteration, '.pth'))
 
@@ -525,11 +523,14 @@ if __name__ == "__main__":
     train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('001_del', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('001_k3', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('003', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('002_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('004-10000', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
+    # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)
+    # train('004_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)
+    # train('005_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)
+    # train('005_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)
     # train('004-10000_r50', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
     # train('004-10000_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
     # train('004_del', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=3000)

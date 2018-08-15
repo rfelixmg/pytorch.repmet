@@ -40,8 +40,34 @@ class Loss(object):
         self.has_loss = None
         self.avg_variance = None
 
-    def update_clusters(self, rep_data, max_iter=20):
-        raise NotImplementedError
+    def update_clusters(self, set_x, max_iter=20):
+        """
+        Given an array of representations for the entire training set,
+        recompute clusters and store example cluster assignments in a
+        quickly sampleable form.
+        """
+        # Lazily allocate array for centroids
+        if self.centroids is None:
+            self.centroids = np.zeros([self.num_classes * self.k, set_x.shape[1]])
+
+        for c in range(self.num_classes):
+            class_mask = self.set_y == self.unique_y[c]  # build true/false mask for classes to allow us to extract them
+            class_examples = set_x[class_mask]  # extract the embds for this class
+            kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
+            kmeans.fit(class_examples)  # run kmeans putting k clusters per class
+
+            # Save cluster centroids for finding impostor clusters
+            start = self.get_cluster_ind(c, 0)
+            stop = self.get_cluster_ind(c, self.k)
+            self.centroids[start:stop] = kmeans.cluster_centers_
+
+            # Update assignments with new global cluster indexes (ie each sample in dataset belongs to cluster id x)
+            self.assignments[class_mask] = self.get_cluster_ind(c, kmeans.predict(class_examples))
+
+        # Construct a map from cluster to example indexes for fast batch creation (the opposite of assignmnets)
+        for cluster_index in range(self.k * self.num_classes):
+            cluster_mask = self.assignments == cluster_index
+            self.cluster_assignments[cluster_index] = np.flatnonzero(cluster_mask)
 
     def update_losses(self, indexes, losses):
         """
@@ -72,7 +98,48 @@ class Loss(object):
                 self.cluster_losses[cluster_index] = 0
 
     def gen_batch(self):
-        raise NotImplementedError
+        """
+        Sample a batch by first sampling a seed cluster proportionally to
+        the mean loss of the clusters, then finding nearest neighbor
+        "impostor" clusters, then sampling d examples uniformly from each cluster.
+
+        The generated batch will consist of m clusters each with d consecutive
+        examples.
+        """
+
+        # Sample seed cluster proportionally to cluster losses if available
+        if self.cluster_losses is not None:
+            p = self.cluster_losses / np.sum(self.cluster_losses)
+            seed_cluster_index = np.random.choice(self.num_classes * self.k, p=p)
+        else:
+            seed_cluster_index = np.random.choice(self.num_classes * self.k)
+
+        # Get imposter clusters by ranking centroids by distance
+        sq_dists = self.calculate_distance(ensure_tensor(self.centroids[seed_cluster_index]), ensure_tensor(self.centroids))
+        sq_dists = np.squeeze(ensure_numpy(sq_dists))
+
+        # Assure only clusters of different class from seed are chosen
+        sq_dists[self.cluster_classes[seed_cluster_index] == self.cluster_classes] = np.inf
+
+        # Get top m-1 (closest) impostor clusters and add seed cluster too
+        cluster_indexs = np.argpartition(sq_dists, self.m - 1)[:self.m - 1]
+        cluster_indexs = np.concatenate([[seed_cluster_index], cluster_indexs])
+
+        # Sample d examples uniformly from m clusters
+        batch_indexes = np.empty([self.m * self.d], int)
+        for i, ci in enumerate(cluster_indexs):
+            x = np.random.choice(self.cluster_assignments[ci], self.d,
+                                 replace=True)  # if clusters have less than d samples we need to allow repick
+            # x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
+            start = i * self.d
+            stop = start + self.d
+            batch_indexes[start:stop] = x
+
+        # Translate class indexes to index for classes within the batch
+        # ie. [y1, y7, y56, y21, y89, y21,...] > [0, 1, 2, 3, 4, 3, ...]
+        class_inds = self.cluster_classes[cluster_indexs]
+
+        return batch_indexes, np.repeat(class_inds, self.d)
 
     def get_cluster_ind(self, c, i):
         """
