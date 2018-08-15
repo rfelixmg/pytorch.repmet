@@ -520,11 +520,11 @@ if __name__ == "__main__":
     #       n_plot_samples=args.n_plot_samples,
     #       n_plot_classes=args.n_plot_classes)
 
-    train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    # train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('001_del', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('001_k3', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('003', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    # train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    train('003', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('002_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)

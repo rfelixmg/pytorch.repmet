@@ -1,11 +1,9 @@
-import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-from sklearn.cluster import KMeans
 
 from loss import Loss
-from utils import ensure_tensor, ensure_numpy
+from utils import ensure_tensor
 
 class RepMetLoss(Loss):
 
@@ -23,66 +21,16 @@ class RepMetLoss(Loss):
         # make leaf variable after editing it then wrap in param
         self.centroids = nn.Parameter(torch.cuda.FloatTensor(self.centroids).requires_grad_())
 
-    # def gen_batch(self):
-    #     """
-    #     Sample a batch by first sampling a seed cluster proportionally to
-    #     the mean loss of the clusters, then finding nearest neighbor
-    #     "impostor" clusters, then sampling d examples uniformly from each cluster.
-    #
-    #     The generated batch will consist of m clusters each with d consecutive
-    #     examples.
-    #     """
-    #
-    #     # Sample seed cluster proportionally to cluster losses if available
-    #     if self.cluster_losses is not None:
-    #         p = self.cluster_losses / np.sum(self.cluster_losses)
-    #         seed_cluster_index = np.random.choice(self.num_classes * self.k, p=p)
-    #     else:
-    #         seed_cluster_index = np.random.choice(self.num_classes * self.k)
-    #
-    #     # Get imposter clusters by ranking centroids by distance
-    #     sq_dists = ensure_numpy(((self.centroids[seed_cluster_index] - self.centroids) ** 2).sum(1))
-    #
-    #     # Assure only clusters of different class from seed are chosen
-    #     # added the int condition as it was returning float and picking up seed_cluster
-    #     sq_dists[int(self.get_class_ind(seed_cluster_index)) == self.cluster_classes] = np.inf
-    #
-    #     # Get top m-1 (closest) impostor clusters and add seed cluster too
-    #     cluster_indexs = np.argpartition(sq_dists, self.m - 1)[:self.m - 1]
-    #     cluster_indexs = np.concatenate([[seed_cluster_index], cluster_indexs])
-    #
-    #     # Sample d examples uniformly from m clusters
-    #     batch_indexes = np.empty([self.m * self.d], int)
-    #     for i, ci in enumerate(cluster_indexs):
-    #         x = np.random.choice(self.cluster_assignments[ci], self.d, replace=True)  # if clusters have less than d samples we need to allow repick
-    #         # x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
-    #         start = i * self.d
-    #         stop = start + self.d
-    #         batch_indexes[start:stop] = x
-    #
-    #     # Get classes for the clusters
-    #     class_inds = self.cluster_classes[cluster_indexs]
-    #
-    #     return batch_indexes, np.repeat(class_inds, self.d)
-
     def loss(self, x, y):
         """Compute repmet loss.
 
-        Given a tensor of features `r`, the assigned class for each example,
-        the assigned cluster for each example, the assigned class for each
-        cluster, the total number of clusters, and separation hyperparameter,
-        compute the magnet loss according to equation (4) in
-        http://arxiv.org/pdf/1511.05939v2.pdf.
-
-        Note that cluster and class indexes should be sequential startined at 0.
+        Given a tensor of features `x`, the assigned class for each example,
+        compute the repmet loss according to equations (4) and (5) in
+        https://arxiv.org/pdf/1806.04728.pdf.
 
         Args:
-            r: A batch of features.
-            classes: Class labels for each example.
-            clusters: Cluster labels for each example.
-            cluster_classes: Class label for each cluster.
-            n_clusters: Total number of clusters.
-            alpha: The cluster separation gap hyperparameter.
+            x: A batch of features.
+            y: Class labels for each example.
 
         Returns:
             total_loss: The total magnet loss for the batch.

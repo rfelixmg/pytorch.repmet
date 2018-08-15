@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 
 
 class Loss(object):
-    """Sample minibatches for magnet loss."""
+    """Parent loss class with functions useful for both magnet and repmet losses."""
     def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
 
         self.unique_y = np.sort(np.unique(set_y))
@@ -49,6 +49,9 @@ class Loss(object):
         # Lazily allocate array for centroids
         if self.centroids is None:
             self.centroids = np.zeros([self.num_classes * self.k, set_x.shape[1]])
+
+        # make sure they are numpy, will convert for repmet where they stored as torch tensors
+        self.centroids = ensure_numpy(self.centroids)
 
         for c in range(self.num_classes):
             class_mask = self.set_y == self.unique_y[c]  # build true/false mask for classes to allow us to extract them
