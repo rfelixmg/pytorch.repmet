@@ -33,7 +33,8 @@ class OxFlowers(data.Dataset):
                  val=False,
                  transform=None,
                  target_transform=None,
-                 download=False):
+                 download=False,
+                 classes=None):
 
         self.root = join(os.path.expanduser(root), self.folder)
         self.train = train
@@ -45,6 +46,7 @@ class OxFlowers(data.Dataset):
             self.download()
 
         self.split = self.load_split()
+        # self.split = self.split[:100]  # TODO: debug only get first ten classes
 
         self.images_folder = join(self.root, 'jpg')
 

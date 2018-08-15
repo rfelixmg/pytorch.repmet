@@ -306,15 +306,20 @@ def compute_reps(net, dataset, indexs, chunk_size=None):
     :return: embeddings as a numpy array
     """
     if chunk_size:
+        # It is very important we shuffle before passing through net as the batchnorms have adverse affects if it's
+        # ordered by class :/ damn bugs
+        indexs_shuf = indexs.copy()
+        random.shuffle(indexs_shuf)
+        shiftback_order = [indexs_shuf.index(i) for i in indexs]
+
         initial_reps = []
-        for s in range(0, len(indexs), chunk_size):
-            indexs_inner = list(indexs[s:min(s + chunk_size, len(indexs))])
+        for s in range(0, len(indexs_shuf), chunk_size):
+            indexs_inner = list(indexs_shuf[s:min(s + chunk_size, len(indexs_shuf))])
             initial_reps.append(ensure_numpy(net(get_inputs(dataset, indexs_inner))))
 
-        return np.vstack(initial_reps)
+        return np.vstack(initial_reps)[shiftback_order]
     else:
         return ensure_numpy(net(get_inputs(dataset, indexs)))
-        # return net(get_inputs(dataset, indexs)*255).detach().cpu().numpy()  # MNIST only learns when is 0-255 not 0-1
 
 def compute_all_reps(net, dataset, chunk_size):
     """Compute representations for entire set in chunks (sequential non-shuffled batches).

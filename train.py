@@ -55,6 +55,8 @@ def load_datasets(set_name):
 
     elif set_name == 'oxford_flowers':
         input_transforms = transforms.Compose([
+            # transforms.CenterCrop(224),
+            # transforms.Resize((224, 224)),
             transforms.RandomResizedCrop(224, ratio=(1, 1.1)),
             # transforms.RandomResizedCrop(229, ratio=(1, 1.1)),
             transforms.ToTensor()])
@@ -94,7 +96,7 @@ def load_net(net_name):
     elif net_name == 'resnet18_e1024_pt':
         net = ResNetEncoder(emb_dim=1024, norm=False, pretrained=True)
     elif net_name == 'resnet18_e1024_fc2048_pt':
-        net = ResNetEncoder(emb_dim=2, fc_dim=2048, norm=True, pretrained=True)
+        net = ResNetEncoder(emb_dim=1024, fc_dim=2048, norm=True, pretrained=True)
     elif net_name == 'inceptionv3_e1024_pt':
         net = InceptionEncoder(emb_dim=1024, norm=False, pretrained=True)
     else:
@@ -219,16 +221,16 @@ def train(run_id,
     for i in range(len(cluster_classes)):
         cluster_classes[i] = the_loss.unique_y[cluster_classes[i]]
 
-    cls_inds = []
-    for i in range(len(the_loss.cluster_classes)):
-        if the_loss.cluster_classes[i] in plot_classes:
-            cls_inds.append(i)
+    cluster_indexs = []
+    for ci in range(len(the_loss.cluster_classes)):
+        if the_loss.cluster_classes[ci] in plot_classes:
+            cluster_indexs.append(ci)
 
     if not load_latest or len(l) < 2:
         # plot it
         graph(initial_reps[plot_sample_indexs], train_y[plot_sample_indexs],
-              cluster_centers=ensure_numpy(the_loss.centroids)[cls_inds],
-              cluster_classes=the_loss.cluster_classes[cls_inds],
+              cluster_centers=ensure_numpy(the_loss.centroids)[cluster_indexs],
+              cluster_classes=the_loss.cluster_classes[cluster_indexs],
               savepath="%s/emb-initial%s" % (plots_path, plots_ext))
 
     # Get some sample indxs to do acc test on... compare these to the acc coming out of the batch calc
@@ -306,14 +308,16 @@ def train(run_id,
                   cluster_classes=the_loss.cluster_classes,
                   savepath="%s/batch-clusters/i%06d%s" % (plots_path, iteration, plots_ext))
 
+        train_reps_this_iter = False
         if not iteration % refresh_clusters_every:
             with open(save_path+'/log.txt', 'a') as f:
                 f.write('Refreshing clusters')
             print('Refreshing clusters')
-            reps = compute_all_reps(net, train_dataset, chunk_size)
-            the_loss.update_clusters(reps)
+            train_reps = compute_all_reps(net, train_dataset, chunk_size=chunk_size)
+            the_loss.update_clusters(train_reps)
 
             cluster_classes = the_loss.cluster_classes
+            train_reps_this_iter = True
 
         # store the stats to graph at end
         batch_losses.append(batch_loss)
@@ -332,8 +336,13 @@ def train(run_id,
             for i in range(len(cluster_classes)):
                 cluster_classes[i] = the_loss.unique_y[cluster_classes[i]]
 
-            # plot_train_emb = compute_reps(net, train_dataset, plot_sample_indexs, chunk_size=chunk_size)
-            plot_train_emb = compute_reps(net, train_dataset, test_train_inds, chunk_size=chunk_size)
+            # so 1. we don't have to recalc, 2. the kmeans update occured on these reps, better graphing ...
+            # if we were to re-get with compute_reps(), batch norm and transforms could give different embeddings
+            if train_reps_this_iter:
+                plot_train_emb = train_reps[test_train_inds]
+            else:
+                plot_train_emb = compute_reps(net, train_dataset, test_train_inds, chunk_size=chunk_size)
+
             plot_test_emb = compute_reps(net, test_dataset, plot_test_sample_indexs, chunk_size=chunk_size)
 
             os.makedirs("%s/train-emb/" % plots_path, exist_ok=True)
@@ -345,14 +354,14 @@ def train(run_id,
 
             graph(plot_train_emb,
                   train_y[plot_sample_indexs],
-                  cluster_centers=ensure_numpy(the_loss.centroids)[cls_inds],
-                  cluster_classes=the_loss.cluster_classes[cls_inds],
+                  cluster_centers=ensure_numpy(the_loss.centroids)[cluster_indexs],
+                  cluster_classes=the_loss.cluster_classes[cluster_indexs],
                   savepath="%s/train-emb/i%06d%s" % (plots_path, iteration, plots_ext))
 
             graph(plot_test_emb,
                   test_y[plot_test_sample_indexs],
-                  cluster_centers=ensure_numpy(the_loss.centroids)[cls_inds],
-                  cluster_classes=the_loss.cluster_classes[cls_inds],
+                  cluster_centers=ensure_numpy(the_loss.centroids)[cluster_indexs],
+                  cluster_classes=the_loss.cluster_classes[cluster_indexs],
                   savepath="%s/test-emb/i%06d%s" % (plots_path, iteration, plots_ext))
 
             graph(plot_train_emb,
@@ -524,13 +533,14 @@ if __name__ == "__main__":
     # train('001_del', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('001_k3', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    train('003', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    # train('003', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('002_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)
-    # train('004_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)
-    # train('005_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)
-    # train('005_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=5000)
+    # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    train('004_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    train('005_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    train('005_k1_nr', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    train('005_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
     # train('004-10000_r50', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
     # train('004-10000_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
     # train('004_del', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=3000)

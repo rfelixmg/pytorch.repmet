@@ -56,6 +56,7 @@ class Loss(object):
         for c in range(self.num_classes):
             class_mask = self.set_y == self.unique_y[c]  # build true/false mask for classes to allow us to extract them
             class_examples = set_x[class_mask]  # extract the embds for this class
+            cmean = np.mean(class_examples,axis=0)
             kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
             kmeans.fit(class_examples)  # run kmeans putting k clusters per class
 
@@ -131,8 +132,7 @@ class Loss(object):
         # Sample d examples uniformly from m clusters
         batch_indexes = np.empty([self.m * self.d], int)
         for i, ci in enumerate(cluster_indexs):
-            x = np.random.choice(self.cluster_assignments[ci], self.d,
-                                 replace=True)  # if clusters have less than d samples we need to allow repick
+            x = np.random.choice(self.cluster_assignments[ci], self.d, replace=True)  # if clusters have less than d samples we need to allow repick
             # x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
             start = i * self.d
             stop = start + self.d
