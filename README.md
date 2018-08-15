@@ -33,6 +33,7 @@ In the batch what % of the batch samples are correctly assigned to their cluster
 
 **2. Simple Accuracy:** 
 Assign a sample x to its closest training cluster. 
+
 ![eq simple](https://latex.codecogs.com/gif.latex?C%28x%29%20%3D%20C%28%5Ctextup%7Barg%7D%20%5Cunderset%7Bi%3D1%2C...%2Cn%5C_clusters%7D%7B%5Ctextup%7Bmin%7D%7D%20%5Cleft%20%5C%7C%20x%20-%20r_i%20%5Cright%20%5C%7C%5E2_2%29)
  
 **3. Magnet Accuracy:** 
