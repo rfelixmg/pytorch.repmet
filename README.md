@@ -42,7 +42,7 @@ then take the sum of the distances of the same classes for each class and take t
 
 ![eq 6 ML](https://latex.codecogs.com/gif.latex?C%28x%29%20%3D%20%5Ctextup%7Barg%7D%20%5Cunderset%7Bc%3D1%2C...%2CN%7D%7B%5Ctextup%7Bmax%7D%7D%20%5Cfrac%7B%5Csum_%7Bl%3AC%28r_l%29%3Dc%7D%20e%5E%7B-%5Cfrac%7B1%7D%7B2%5Csigma%20%5E2%7D%20%5Cleft%20%5C%7C%20x%20-%20r_l%20%5Cright%20%5C%7C%5E2_2%7D%7D%7B%5Csum_%7Bl%3D1%7D%5E%7BL%7De%5E%7B-%5Cfrac%7B1%7D%7B2%5Csigma%20%5E2%7D%20%5Cleft%20%5C%7C%20x%20-%20r_l%20%5Cright%20%5C%7C%5E2_2%7D%7D)
 
-where ![sig2](https://latex.codecogs.com/gif.latex?%5Csigma%20%5E2) is the avg of all ![sig2](https://latex.codecogs.com/gif.latex?%5Csigma%20%5E2) in training.
+where ![sig2](https://latex.codecogs.com/gif.latex?%5Csigma%20%5E2) is the avg of all ![sig2](https://latex.codecogs.com/gif.latex?%5Csigma%20%5E2) in training. Is equivalent to Simple Accuracy when n_clusters is less than L, and k=1.
 
 **4. RepMet Accuracy:** 
 Use eq. 6 from [RepMet Loss Paper](https://arxiv.org/pdf/1806.04728.pdf). Equivalent to Magnet Accuracy however takes all clusters (n_clusters) into consideration not just top **L**.
@@ -50,7 +50,7 @@ Also doesn't normalise into probability distribution before the arg max.
 
 ![eq 6 RM](https://latex.codecogs.com/gif.latex?C%28x%29%20%3D%20%5Ctextup%7Barg%7D%20%5Cunderset%7Bc%3D1%2C...%2CN%7D%7B%5Ctextup%7Bmax%7D%7D%20%5Csum_%7Bi%3AC%28r_i%29%3Dc%7D%20e%5E%7B-%5Cfrac%7B1%7D%7B2%5Csigma%20%5E2%7D%20%5Cleft%20%5C%7C%20x%20-%20r_i%20%5Cright%20%5C%7C%5E2_2%7D)
 
-where ![sig2](https://latex.codecogs.com/gif.latex?%5Csigma%20%5E2) is set to 0.5 as in training.
+where ![sig2](https://latex.codecogs.com/gif.latex?%5Csigma%20%5E2) is set to 0.5 as in training. Is equivalent to Simple Accuracy when k=1.
 
 **5. Unsupervised Accuracy:** 
 Run K-Means on set (ie. don't use trained clusters) and then greedily assign classes to clusters based on the class of samples that fall in that cluster.  

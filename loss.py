@@ -175,7 +175,13 @@ class Loss(object):
             # From RepNet paper
             # Is equivalent to magnet when variance is the same (just doesn't first calc as probability distribution)
 
-            variance = 0.5  # having as 0.5 rather than a big self.avg_variance causes all costs to be 0 after the exp
+            # we stray from repmet paper here and do what magnet does and take avg sigma from training...
+            # however if trained with repmet loss then the avg will be 0.5 anyways
+            # so this just makes the variance normalisers equivalent across different eval techniques
+            if self.avg_variance:
+                variance = self.avg_variance
+            else:
+                variance = 0.5
             var_normalizer = -1 / (2 * variance)
 
             # apply exp and variance normalisation

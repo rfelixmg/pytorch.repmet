@@ -65,6 +65,11 @@ class RepMetLoss(Loss):
         variance = 0.5  # hard code 0.5 [as suggested in paper] but seems to now work as well as the calculated variance in my exp
         var_normalizer = -1 / (2 * variance)
 
+        if not self.avg_variance:
+            self.avg_variance = variance
+        else:
+            self.avg_variance = (self.avg_variance + variance) / 2
+
         # Compute numerator
         numerator = torch.exp(var_normalizer * min_match)
 
