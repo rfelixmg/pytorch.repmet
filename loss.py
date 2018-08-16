@@ -50,20 +50,22 @@ class Loss(object):
         if self.centroids is None:
             self.centroids = np.zeros([self.num_classes * self.k, set_x.shape[1]])
 
-        # make sure they are numpy, will convert for repmet where they stored as torch tensors
-        self.centroids = ensure_numpy(self.centroids)
-
         for c in range(self.num_classes):
             class_mask = self.set_y == self.unique_y[c]  # build true/false mask for classes to allow us to extract them
             class_examples = set_x[class_mask]  # extract the embds for this class
-            cmean = np.mean(class_examples,axis=0)
             kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
             kmeans.fit(class_examples)  # run kmeans putting k clusters per class
 
             # Save cluster centroids for finding impostor clusters
             start = self.get_cluster_ind(c, 0)
             stop = self.get_cluster_ind(c, self.k)
-            self.centroids[start:stop] = kmeans.cluster_centers_
+
+            if type(self.centroids).__module__ == np.__name__:
+                self.centroids[start:stop] = kmeans.cluster_centers_
+            elif type(self.centroids).__module__ == torch.__name__:
+                self.centroids.data[start:stop] = torch.cuda.FloatTensor(kmeans.cluster_centers_)  # apply on data so it stays leaf
+            elif type(self.centroids).__module__ == 'torch.nn.parameter':
+                self.centroids.data[start:stop] = torch.cuda.FloatTensor(kmeans.cluster_centers_)
 
             # Update assignments with new global cluster indexes (ie each sample in dataset belongs to cluster id x)
             self.assignments[class_mask] = self.get_cluster_ind(c, kmeans.predict(class_examples))

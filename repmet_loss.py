@@ -16,10 +16,13 @@ class RepMetLoss(Loss):
         recompute clusters and store example cluster assignments in a
         quickly sampleable form.
         """
+
+        if self.centroids is None:
+            # make leaf variable after editing it then wrap in param
+            self.centroids = nn.Parameter(torch.zeros((self.num_classes * self.k, set_x.shape[1]), requires_grad=True).cuda())
+
         super().update_clusters(set_x, max_iter=max_iter)
 
-        # make leaf variable after editing it then wrap in param
-        self.centroids = nn.Parameter(torch.cuda.FloatTensor(self.centroids).requires_grad_())
 
     def loss(self, x, y):
         """Compute repmet loss.

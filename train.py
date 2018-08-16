@@ -85,18 +85,29 @@ def load_datasets(set_name):
 def load_net(net_name):
     if net_name == 'mnist_default':
         net = MNISTEncoder(emb_dim=2)
-    elif net_name == 'resnet50_e512':
-        net = ResNetEncoder(emb_dim=512, fc_dim=None)
-    elif net_name == 'resnet50_e512_fc512':
-        net = ResNetEncoder(emb_dim=512, fc_dim=512)
-    elif net_name == 'resnet50_e1024_fc1024':
-        net = ResNetEncoder(emb_dim=1024, fc_dim=1024, norm=True)
-    elif net_name == 'resnet50_e1024_fc1024':
-        net = ResNetEncoder(emb_dim=1024, fc_dim=1024, norm=True)
+    elif net_name == 'resnet18_e512':
+        net = ResNetEncoder(type=18, emb_dim=512, fc_dim=None, norm=False)
+    elif net_name == 'resnet18_e512_fc512':
+        net = ResNetEncoder(type=18, emb_dim=512, fc_dim=512, norm=False)
+    elif net_name == 'resnet18_e1024_fc1024':
+        net = ResNetEncoder(type=18, emb_dim=1024, fc_dim=1024, norm=False)
+    elif net_name == 'resnet18_e1024_fc1024_norm':
+        net = ResNetEncoder(type=18, emb_dim=1024, fc_dim=1024, norm=True)
     elif net_name == 'resnet18_e1024_pt':
-        net = ResNetEncoder(emb_dim=1024, norm=False, pretrained=True)
-    elif net_name == 'resnet18_e1024_fc2048_pt':
-        net = ResNetEncoder(emb_dim=1024, fc_dim=2048, norm=True, pretrained=True)
+        net = ResNetEncoder(type=18, emb_dim=1024, norm=False, pretrained=True)
+    elif net_name == 'resnet18_e1024_fc2048_norm_pt':
+        net = ResNetEncoder(type=18, emb_dim=1024, fc_dim=2048, norm=True, pretrained=True)
+    elif net_name == 'resnet18_e1024_fc2048_norm':
+        net = ResNetEncoder(type=18, emb_dim=1024, fc_dim=2048, norm=True, pretrained=False)
+
+    elif net_name == 'resnet50_e512':
+        net = ResNetEncoder(type=50, emb_dim=512, fc_dim=None, norm=False)
+    elif net_name == 'resnet50_e512_fc512':
+        net = ResNetEncoder(type=50, emb_dim=512, fc_dim=512, norm=False)
+    elif net_name == 'resnet50_e1024_fc1024':
+        net = ResNetEncoder(type=50, emb_dim=1024, fc_dim=1024, norm=False)
+    elif net_name == 'resnet50_e1024_fc1024_norm':
+        net = ResNetEncoder(type=50, emb_dim=1024, fc_dim=1024, norm=True)
     elif net_name == 'inceptionv3_e1024_pt':
         net = InceptionEncoder(emb_dim=1024, norm=False, pretrained=True)
     else:
@@ -163,7 +174,9 @@ def train(run_id,
         the_loss.update_clusters(initial_reps)
 
         # Setup the optimizer
-        optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=learning_rate)
+        # optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=learning_rate)
+        optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate)
+        optimizerb = torch.optim.Adam([the_loss.centroids], lr=0.1)
 
     l = os.listdir(save_path)
     if load_latest and len(l) > 1:
@@ -251,9 +264,13 @@ def train(run_id,
         batch_loss, batch_example_losses, batch_acc = the_loss.loss(outputs, batch_y)
 
         # Pass the gradient and update
+
+        # optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=learning_rate)
         optimizer.zero_grad()
+        optimizerb.zero_grad()
         batch_loss.backward()
         optimizer.step()
+        optimizerb.step()
 
         # Lust changing some types
         batch_loss = float(ensure_numpy(batch_loss))
@@ -277,8 +294,12 @@ def train(run_id,
             test_acc_c = the_loss.calc_accuracy(test_reps, test_y[test_test_inds], method='repmet')
             train_acc_c = the_loss.calc_accuracy(train_reps, train_y[test_train_inds], method='repmet')
 
-            test_acc_d = the_loss.calc_accuracy(test_reps, test_y[test_test_inds], method='unsupervised')
-            train_acc_d = the_loss.calc_accuracy(train_reps, train_y[test_train_inds], method='unsupervised')
+            # removed because of failed runs with out of mem errors
+            # test_acc_d = the_loss.calc_accuracy(test_reps, test_y[test_test_inds], method='unsupervised')
+            # train_acc_d = the_loss.calc_accuracy(train_reps, train_y[test_train_inds], method='unsupervised')
+
+            test_acc_d = test_acc_c
+            train_acc_d = train_acc_c
 
             with open(save_path+'/log.txt', 'a') as f:
                 f.write("Iteration %06d/%06d: Tr. L: %0.3f :: Batch. A: %0.3f :::: Tr. A - simple: %0.3f -- magnet: %0.3f -- repmet: %0.3f -- unsupervised: %0.3f :::: Te. A - simple: %0.3f -- magnet: %0.3f -- repmet: %0.3f -- unsupervised: %0.3f\n" % (iteration, n_iterations, batch_loss, batch_acc, train_acc, train_acc_b, train_acc_c, train_acc_d, test_acc, test_acc_b, test_acc_c, test_acc_d))
@@ -309,7 +330,7 @@ def train(run_id,
                   savepath="%s/batch-clusters/i%06d%s" % (plots_path, iteration, plots_ext))
 
         train_reps_this_iter = False
-        if not iteration % refresh_clusters_every:
+        if iteration > 0 and not iteration % refresh_clusters_every:
             with open(save_path+'/log.txt', 'a') as f:
                 f.write('Refreshing clusters')
             print('Refreshing clusters')
@@ -529,18 +550,17 @@ if __name__ == "__main__":
     #       n_plot_samples=args.n_plot_samples,
     #       n_plot_classes=args.n_plot_classes)
 
-    # train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('001_del', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('001_k3', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('003', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('002_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('002_noRefresh', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+
     # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    train('004_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    train('005_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    train('005_k1_nr', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    train('005_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('004_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('005_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('005_k1_nr', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('005_k3_nr', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('005_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
     # train('004-10000_r50', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
     # train('004-10000_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
     # train('004_del', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=3000)
@@ -548,6 +568,20 @@ if __name__ == "__main__":
     # train('005_k1', 'oxford_flowers', 'inceptionv3_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
     # train('004_k1', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
 
+    train('004_k1_resnet18_e512', 'oxford_flowers', 'resnet18_e512', 'magnet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    train('004_k1_resnet18_e1024_fc2048_norm', 'oxford_flowers', 'resnet18_e1024_fc2048_norm', 'magnet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    train('004_k1_resnet18_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet18_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    train('004_k1_resnet18_e512_fc512', 'oxford_flowers', 'resnet18_e512_fc512', 'magnet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    train('004_k1_resnet18_e1024_fc1024', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    train('004_k1_resnet18_e1024_pt', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    train('004_k1_resnet18_e1024_fc1024_norm', 'oxford_flowers', 'resnet18_e1024_fc1024_norm', 'magnet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
 
     # train('003', 'oxford_flowers', 'resnet50_e512', 'magnet', m=12, d=4, k=3, alpha=1.0)
     # train('004', 'oxford_flowers', 'resnet50_e512', 'repmet', m=12, d=4, k=3, alpha=1.0)
