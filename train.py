@@ -187,6 +187,8 @@ def train(run_id,
 
         net.load_state_dict(state['state_dict'])
         optimizer.load_state_dict(state['optimizer'])
+        if loss_type == "repmet":
+            optimizerb = state['optimizerb']
 
         start_iteration = state['iteration']+1
         best_acc = state['best_acc']
@@ -267,10 +269,12 @@ def train(run_id,
 
         # optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=learning_rate)
         optimizer.zero_grad()
-        optimizerb.zero_grad()
+        if loss_type == "repmet":
+            optimizerb.zero_grad()
         batch_loss.backward()
         optimizer.step()
-        optimizerb.step()
+        if loss_type == "repmet":
+            optimizerb.step()
 
         # Lust changing some types
         batch_loss = float(ensure_numpy(batch_loss))
@@ -452,6 +456,8 @@ def train(run_id,
                     'train_accs': train_accs,
                     'test_accs': test_accs,
                 }
+                if loss_type == "repmet":
+                    state['optimizerb'] = optimizerb.state_dict()
                 torch.save(state, "%s/i%06d%s" % (save_path, iteration, '.pth'))
 
     # END TRAINING LOOP
@@ -500,6 +506,8 @@ def train(run_id,
             'train_accs': train_accs,
             'test_accs': test_accs,
         }
+        if loss_type == "repmet":
+            state['optimizerb'] = optimizerb.state_dict()
         torch.save(state, "%s/i%06d%s" % (save_path, iteration, '.pth'))
 
 def parse_args():
