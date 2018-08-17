@@ -1,118 +1,18 @@
 from __future__ import print_function
 
 import os
-import math
 import argparse
-import numpy as np
 
-import torch
 import torch.backends.cudnn as cudnn
-import torchvision
-import torchvision.transforms as transforms
 
 import configs
-from data.stanford_dogs import StanDogs
-from data.oxford_flowers import OxFlowers
-from models.definitions import MNISTEncoder, ResNetEncoder, InceptionEncoder
 from utils import *
 from magnet_loss import MagnetLoss
 from repmet_loss import RepMetLoss
+from data.load import load_datasets
+from models.load import load_net
 
 assert torch.cuda.is_available(), 'Error: CUDA not found!'
-
-
-def load_datasets(set_name):
-    if set_name == 'mnist':
-        train_dataset = torchvision.datasets.MNIST(root=os.path.join(configs.general.paths.imagesets, 'MNIST'),
-                                                   train=True,
-                                                   transform=transforms.ToTensor(),
-                                                   download=True)
-        test_dataset = torchvision.datasets.MNIST(root=os.path.join(configs.general.paths.imagesets, 'MNIST'),
-                                                  train=False,
-                                                  transform=transforms.ToTensor())
-
-    elif set_name == 'stanford_dogs':
-        input_transforms = transforms.Compose([
-            transforms.RandomResizedCrop(224, ratio=(1, 1.1)),
-            # transforms.RandomResizedCrop(229, ratio=(1, 1.1)),
-            transforms.ToTensor()])
-
-        train_dataset = StanDogs(root=configs.general.paths.imagesets,
-                                 train=True,
-                                 cropped=False,
-                                 transform=input_transforms,
-                                 download=True)
-        test_dataset = StanDogs(root=configs.general.paths.imagesets,
-                                train=False,
-                                cropped=False,
-                                transform=input_transforms,
-                                download=True)
-
-        print("Training set stats:")
-        train_dataset.stats()
-        print("Testing set stats:")
-        test_dataset.stats()
-
-    elif set_name == 'oxford_flowers':
-        input_transforms = transforms.Compose([
-            # transforms.CenterCrop(224),
-            # transforms.Resize((224, 224)),
-            transforms.RandomResizedCrop(224, ratio=(1, 1.1)),
-            # transforms.RandomResizedCrop(229, ratio=(1, 1.1)),
-            transforms.ToTensor()])
-
-        train_dataset = OxFlowers(root=configs.general.paths.imagesets,
-                                  train=True,
-                                  val=False,
-                                  transform=input_transforms,
-                                  download=True)
-        test_dataset = OxFlowers(root=configs.general.paths.imagesets,
-                                train=False,
-                                val=True,
-                                transform=input_transforms,
-                                download=True)
-
-        print("Training set stats:")
-        train_dataset.stats()
-        print("Testing set stats:")
-        test_dataset.stats()
-    else:
-        return None, None
-
-    return train_dataset, test_dataset
-
-
-def load_net(net_name):
-    if net_name == 'mnist_default':
-        net = MNISTEncoder(emb_dim=2)
-    elif net_name == 'resnet18_e512':
-        net = ResNetEncoder(type=18, emb_dim=512, fc_dim=None, norm=False)
-    elif net_name == 'resnet18_e512_fc512':
-        net = ResNetEncoder(type=18, emb_dim=512, fc_dim=512, norm=False)
-    elif net_name == 'resnet18_e1024_fc1024':
-        net = ResNetEncoder(type=18, emb_dim=1024, fc_dim=1024, norm=False)
-    elif net_name == 'resnet18_e1024_fc1024_norm':
-        net = ResNetEncoder(type=18, emb_dim=1024, fc_dim=1024, norm=True)
-    elif net_name == 'resnet18_e1024_pt':
-        net = ResNetEncoder(type=18, emb_dim=1024, norm=False, pretrained=True)
-    elif net_name == 'resnet18_e1024_fc2048_norm_pt':
-        net = ResNetEncoder(type=18, emb_dim=1024, fc_dim=2048, norm=True, pretrained=True)
-    elif net_name == 'resnet18_e1024_fc2048_norm':
-        net = ResNetEncoder(type=18, emb_dim=1024, fc_dim=2048, norm=True, pretrained=False)
-
-    elif net_name == 'resnet50_e512':
-        net = ResNetEncoder(type=50, emb_dim=512, fc_dim=None, norm=False)
-    elif net_name == 'resnet50_e512_fc512':
-        net = ResNetEncoder(type=50, emb_dim=512, fc_dim=512, norm=False)
-    elif net_name == 'resnet50_e1024_fc1024':
-        net = ResNetEncoder(type=50, emb_dim=1024, fc_dim=1024, norm=False)
-    elif net_name == 'resnet50_e1024_fc1024_norm':
-        net = ResNetEncoder(type=50, emb_dim=1024, fc_dim=1024, norm=True)
-    elif net_name == 'inceptionv3_e1024_pt':
-        net = InceptionEncoder(emb_dim=1024, norm=False, pretrained=True)
-    else:
-        return None
-    return net
 
 
 def train(run_id,
@@ -121,7 +21,7 @@ def train(run_id,
           loss_type,
           m, d, k, alpha,
           n_iterations=50000,
-          learning_rate=1e-4,
+          learning_rate=0.001,
           chunk_size=32,
           refresh_clusters_every=500,
           calc_acc_every=100,
@@ -414,10 +314,10 @@ def train(run_id,
                          'train acc': train_accs[2],
                          'test acc': test_accs[2]},
                         savepath="%s/loss_repmet%s" % (plots_path, plots_ext))
-            plot_smooth({'loss': batch_losses,
-                         'train acc': train_accs[3],
-                         'test acc': test_accs[3]},
-                        savepath="%s/loss_unsupervised%s" % (plots_path, plots_ext))
+            # plot_smooth({'loss': batch_losses,
+            #              'train acc': train_accs[3],
+            #              'test acc': test_accs[3]},
+            #             savepath="%s/loss_unsupervised%s" % (plots_path, plots_ext))
 
             plot_cluster_data(the_loss.cluster_losses,
                               the_loss.cluster_classes,
@@ -521,7 +421,7 @@ def parse_args():
     parser.add_argument('--k', required=True, help='number of clusters per class', default=3, type=int)
     parser.add_argument('--alpha', required=True, help='cluster margin', default=1.0, type=int)
     parser.add_argument('--n_iterations', required=False, help='number of iterations to perform', default=50000, type=int)
-    parser.add_argument('--learning_rate', required=False, help='the learning rate', default=1e-4, type=float)
+    parser.add_argument('--learning_rate', required=False, help='the learning rate', default=0.001, type=float)
     parser.add_argument('--chunk_size', required=False, help='the chunk/batch size for calculating embeddings (lower for less mem)', default=32, type=int)
     parser.add_argument('--refresh_clusters_every', required=False, help='refresh the clusters every ? iterations', default=500, type=int)
     parser.add_argument('--calc_acc_every', required=False, help='calculate the accuracy every ? iterations', default=100, type=int)
@@ -558,9 +458,9 @@ if __name__ == "__main__":
     #       n_plot_samples=args.n_plot_samples,
     #       n_plot_classes=args.n_plot_classes)
 
-    train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    train('002_noRefresh', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('001', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('002', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('002_noRefresh', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
 
     # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
@@ -576,21 +476,35 @@ if __name__ == "__main__":
     # train('005_k1', 'oxford_flowers', 'inceptionv3_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
     # train('004_k1', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
 
-    train('004_k1_resnet18_e512', 'oxford_flowers', 'resnet18_e512', 'magnet', m=12, d=4, k=1, alpha=1.0,
-          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('004_k1_resnet18_e1024_fc2048_norm', 'oxford_flowers', 'resnet18_e1024_fc2048_norm', 'magnet', m=12, d=4, k=1, alpha=1.0,
-          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('004_k1_resnet18_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet18_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
-          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('004_k1_resnet18_e512_fc512', 'oxford_flowers', 'resnet18_e512_fc512', 'magnet', m=12, d=4, k=1, alpha=1.0,
-          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('004_k1_resnet18_e1024_fc1024', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0,
-          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('004_k1_resnet18_e1024_pt', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
-          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('004_k1_resnet18_e1024_fc1024_norm', 'oxford_flowers', 'resnet18_e1024_fc1024_norm', 'magnet', m=12, d=4, k=1, alpha=1.0,
-          refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_k1_resnet18_e512', 'oxford_flowers', 'resnet18_e512', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_k1_resnet18_e1024_fc2048_norm', 'oxford_flowers', 'resnet18_e1024_fc2048_norm', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_k1_resnet18_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet18_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_k1_resnet18_e512_fc512', 'oxford_flowers', 'resnet18_e512_fc512', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_k1_resnet18_e1024_fc1024', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_k1_resnet18_e1024_pt', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_k1_resnet18_e1024_fc1024_norm', 'oxford_flowers', 'resnet18_e1024_fc1024_norm', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
 
+    # train('004_k1_inceptionv3_fc2048_e1024_pt_l', 'oxford_flowers', 'inceptionv3_fc2048_e1024_pt_l', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_k1_resnet50_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet50_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
+    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    train('004_k3_resnet50_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet50_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=3, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('005_k1_resnet50_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet50_e1024_fc2048_norm_pt', 'repmet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('005_k3_resnet50_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet50_e1024_fc2048_norm_pt', 'repmet', m=12, d=4, k=3, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('006_k3_resnet50_e1024_fc2048_norm_pt', 'stanford_dogs', 'resnet50_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=3, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('006_k1_resnet50_e1024_fc2048_norm_pt', 'stanford_dogs', 'resnet50_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
+          refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
     # train('003', 'oxford_flowers', 'resnet50_e512', 'magnet', m=12, d=4, k=3, alpha=1.0)
     # train('004', 'oxford_flowers', 'resnet50_e512', 'repmet', m=12, d=4, k=3, alpha=1.0)
     # train('007b', 'oxford_flowers', 'resnet50_e512', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000)
