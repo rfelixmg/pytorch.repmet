@@ -8,7 +8,7 @@ import torch.backends.cudnn as cudnn
 import configs
 from utils import *
 from magnet_loss import MagnetLoss
-from repmet_loss import RepMetLoss
+from repmet_loss import RepMetLoss, RepMetLoss2
 from data.load import load_datasets
 from models.load import load_net
 
@@ -77,6 +77,16 @@ def train(run_id,
         # optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=learning_rate)
         optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate)
         optimizerb = torch.optim.Adam([the_loss.centroids], lr=0.1)
+    elif loss_type == "repmet2":
+        the_loss = RepMetLoss2(train_y, k, m, d, measure='euclidean')#'cosine')
+
+        # Initialise the embeddings/representations/clusters
+        the_loss.update_clusters(initial_reps)
+
+        # Setup the optimizer
+        # optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=learning_rate)
+        optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate)
+        optimizerb = torch.optim.Adam([the_loss.centroids], lr=0.1)
 
     l = os.listdir(save_path)
     if load_latest and len(l) > 1:
@@ -87,7 +97,7 @@ def train(run_id,
 
         net.load_state_dict(state['state_dict'])
         optimizer.load_state_dict(state['optimizer'])
-        if loss_type == "repmet":
+        if loss_type == "repmet" or loss_type == "repmet2":
             optimizerb = state['optimizerb']
 
         start_iteration = state['iteration']+1
@@ -169,11 +179,11 @@ def train(run_id,
 
         # optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=learning_rate)
         optimizer.zero_grad()
-        if loss_type == "repmet":
+        if loss_type == "repmet" or loss_type == "repmet2":
             optimizerb.zero_grad()
         batch_loss.backward()
         optimizer.step()
-        if loss_type == "repmet":
+        if loss_type == "repmet" or loss_type == "repmet2":
             optimizerb.step()
 
         # Lust changing some types
@@ -356,7 +366,7 @@ def train(run_id,
                     'train_accs': train_accs,
                     'test_accs': test_accs,
                 }
-                if loss_type == "repmet":
+                if loss_type == "repmet" or loss_type == "repmet2":
                     state['optimizerb'] = optimizerb.state_dict()
                 torch.save(state, "%s/i%06d%s" % (save_path, iteration, '.pth'))
 
@@ -406,7 +416,7 @@ def train(run_id,
             'train_accs': train_accs,
             'test_accs': test_accs,
         }
-        if loss_type == "repmet":
+        if loss_type == "repmet" or loss_type == "repmet2":
             state['optimizerb'] = optimizerb.state_dict()
         torch.save(state, "%s/i%06d%s" % (save_path, iteration, '.pth'))
 

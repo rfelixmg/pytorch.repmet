@@ -142,21 +142,6 @@ class RepMetLoss2(Loss):
 
         # Compute the two masks selecting the sample_costs related to each class(r)=class(cluster/rep)
         intra_cluster_mask = self.comparison_mask(y, torch.from_numpy(self.cluster_classes).cuda())
-        intra_cluster_mask_op = ~intra_cluster_mask
-
-        # Calculate the minimum distance to rep of different class
-        # therefore we make all values for correct clusters bigger so they are ignored..
-        intra_cluster_costs_ignore_op = (intra_cluster_mask.float() * (sample_costs.max() * 1.5))
-        intra_cluster_costs_desired_op = intra_cluster_mask_op.float() * sample_costs
-        intra_cluster_costs_together_op = intra_cluster_costs_ignore_op + intra_cluster_costs_desired_op
-        min_non_match, _ = intra_cluster_costs_together_op.min(1)
-
-        # Calculate the minimum distance to rep of same class
-        # therefore we make all values for other clusters bigger so they are ignored..
-        intra_cluster_costs_ignore = (intra_cluster_mask_op.float() * (sample_costs.max() * 1.5))
-        intra_cluster_costs_desired = intra_cluster_mask.float() * sample_costs
-        intra_cluster_costs_together = intra_cluster_costs_ignore + intra_cluster_costs_desired
-        min_match, _ = intra_cluster_costs_together.min(1)
 
         # Compute variance of intra-cluster distances
         # N = x.shape[0]
@@ -170,21 +155,17 @@ class RepMetLoss2(Loss):
             self.avg_variance = (self.avg_variance + variance) / 2
 
         # Compute numerator
-        numerator = torch.exp(var_normalizer * min_match)
+        sample_costs = torch.exp(var_normalizer * sample_costs)
+        numerator = (intra_cluster_mask.float() * sample_costs).sum(1)
 
         # Compute denominator
-        # diff_class_mask = tf.to_float(tf.logical_not(comparison_mask(classes, cluster_classes)))
-        diff_class_mask = intra_cluster_mask_op.float()
-        denom_sample_costs = torch.exp(var_normalizer * sample_costs)
-        denominator = (diff_class_mask.cuda() * denom_sample_costs).sum(1)
-
+        denominator = sample_costs.sum(1)
         # Compute example losses and total loss
         epsilon = 1e-8
 
         # Compute example losses and total loss
-        losses_eq5 = F.relu(-torch.log(numerator / (denominator + epsilon) + epsilon) + self.alpha)
+        losses = F.relu(-torch.log(numerator / (denominator + epsilon) + epsilon) + self.alpha)
 
-        losses = losses_eq5
         total_loss = losses.mean()
 
         _, preds = sample_costs.min(1)

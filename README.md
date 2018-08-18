@@ -39,7 +39,7 @@ where:
 
 
 **Version 2:**
-Sums the distance of all representatives of the same class in the numerator, and doesn't disregard and in the denominator.
+Sums the distance of all representatives of the same class in the numerator, and doesn't disregard any in the denominator.
 
 ![eq repmetv2](https://latex.codecogs.com/gif.latex?L%28%5CTheta%20%29%20%3D%20%5Cfrac%7B1%7D%7BN%7D%5Csum_%7Bn%3D1%7D%5E%7BN%7D%5Cleft%20%7C%20-%5Ctextup%7Blog%7D%20%5Cleft%20%28%20%5Cfrac%7B%5Cunderset%7Bi%3AC%28R_i%29%3D%20C%28E_n%29%7D%5Csum%20e%5E%7B-%5Cfrac%7B1%7D%7B2%5Csigma%5E2%7D%5Cleft%20%5C%7C%20E_n%20-%20R_i%20%5Cright%20%5C%7C%5E2_2%7D%7D%7B%5Cunderset%7Bi%7D%5Csum%20e%5E%7B-%5Cfrac%7B1%7D%7B2%5Csigma%5E2%7D%5Cleft%20%5C%7C%20E_n%20-%20R_i%20%5Cright%20%5C%7C%5E2_2%7D%7D%20%5Cright%20%29%20&plus;%20%5Calpha%20%5Cright%20%7C_&plus;)
 
