@@ -155,11 +155,11 @@ class RepMetLoss2(Loss):
             self.avg_variance = (self.avg_variance + variance) / 2
 
         # Compute numerator
-        sample_costs = torch.exp(var_normalizer * sample_costs)
-        numerator = (intra_cluster_mask.float() * sample_costs).sum(1)
+        sample_costs_e = torch.exp(var_normalizer * sample_costs)
+        numerator = (intra_cluster_mask.float() * sample_costs_e).sum(1)
 
         # Compute denominator
-        denominator = sample_costs.sum(1)
+        denominator = sample_costs_e.sum(1)
         # Compute example losses and total loss
         epsilon = 1e-8
 

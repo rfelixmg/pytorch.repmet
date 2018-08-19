@@ -34,7 +34,7 @@ def load_net(net_name):
     elif net_name == 'inceptionv3_fc2048_e1024_pt_l':
         net = InceptionEncoder(emb_dim=1024, fc_dim=2048, norm=True, pretrained=True, lock=True)
     elif net_name == 'inceptionv3_fc2048_e1024_pt_ul':
-        net = InceptionEncoder(emb_dim=1024, fc_dim=2048, norm=True, pretrained=True, lock=True)
+        net = InceptionEncoder(emb_dim=1024, fc_dim=2048, norm=True, pretrained=True, lock=False)
     else:
         return None
     return net

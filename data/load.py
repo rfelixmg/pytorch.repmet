@@ -43,9 +43,9 @@ def load_datasets(set_name):
             # transforms.CenterCrop(224),
             # transforms.Resize((224, 224)),
             # transforms.RandomResizedCrop(224, ratio=(1, 1.1)),
-            transforms.RandomResizedCrop(224, ratio=(1, 1.3)),
+            # transforms.RandomResizedCrop(224, ratio=(1, 1.3)),
+            transforms.RandomResizedCrop(299, ratio=(1, 1.3)),
             transforms.RandomHorizontalFlip(),
-            # transforms.RandomResizedCrop(229, ratio=(1, 1.1)),
             transforms.ToTensor()])
 
         train_dataset = OxFlowers(root=configs.general.paths.imagesets,
