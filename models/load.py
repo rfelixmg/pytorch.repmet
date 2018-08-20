@@ -37,6 +37,9 @@ def load_net(net_name):
     elif net_name == 'resnet18_fc2048_e2_pt_ul':
         net = ResNetEncoder(type=18, emb_dim=2, fc_dim=2048, norm=False, pretrained=True, lock=False)
         input_size = 224
+    elif net_name == 'resnet18_fc1024_e2_pt_norm':
+        net = ResNetEncoder(type=18, emb_dim=2, fc_dim=1024, norm=True, pretrained=True, lock=False)
+        input_size = 224
 
     elif net_name == 'resnet50_e512':
         net = ResNetEncoder(type=50, emb_dim=512, fc_dim=None, norm=False)

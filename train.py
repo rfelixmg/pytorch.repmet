@@ -24,6 +24,7 @@ def train(run_id,
           learning_rate=1e-4,#0.001 this lr (0.001) messed up the learning very badly (doesn't learn)
           chunk_size=32,
           refresh_clusters_every=500,
+          norm_clusters=False,
           calc_acc_every=100,
           load_latest=True,
           save_every=1000,
@@ -86,7 +87,7 @@ def train(run_id,
         # Setup the optimizer
         # optimizer = torch.optim.Adam(list(net.parameters()) + [the_loss.centroids], lr=learning_rate)
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=learning_rate)
-        optimizerb = torch.optim.Adam([the_loss.centroids], lr=0.001)
+        optimizerb = torch.optim.Adam([the_loss.centroids], lr=0.1)#0.001)
 
     l = os.listdir(save_path)
     if load_latest and len(l) > 1:
@@ -183,15 +184,19 @@ def train(run_id,
         optimizer.step()
         if loss_type == "repmet" or loss_type == "repmet2":
             optimizerb.step()
-            # Let's also normalise those centroids [because repmet pushes them away from unit sphere] to:
-            # Option 1: sit on the hypersphere (use norm)
-            # g = the_loss.centroids.norm(p=2,dim=0,keepdim=True)
-            # h = the_loss.centroids.norm(p=2,dim=1,keepdim=True)
 
-            # Option 2: sit on OR within the hypersphere (divide by max [scales all evenly]))
-            # mx, _ = the_loss.centroids.max(0)
-            # mx, _ = mx.max(0)
-            # the_loss.centroids.data = the_loss.centroids/mx
+            if norm_clusters:
+                # Let's also normalise those centroids [because repmet pushes them away from unit sphere] to:
+                # Option 1: sit on the hypersphere (use norm)
+                # g = the_loss.centroids.norm(p=2,dim=0,keepdim=True)
+                import torch.nn.functional as F
+                the_loss.centroids.data = F.normalize(the_loss.centroids)
+
+                # Option 2: sit on OR within the hypersphere (divide by max [scales all evenly]))
+                # mx, _ = the_loss.centroids.max(0)
+                # mx, _ = mx.max(0)
+                # the_loss.centroids.data = the_loss.centroids/mx
+                # What you wrote here doesn't work as scales axes independently...
 
         # Just changing some types
         batch_loss = float(ensure_numpy(batch_loss))
@@ -488,10 +493,22 @@ if __name__ == "__main__":
     # train('004_r50_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_r50_k1_inceptionv3_fc2048_e1024_pt_ul_norm', 'oxford_flowers', 'inceptionv3_fc2048_e1024_pt_ul_norm', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
 
-    train('005_r50_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('006_r50_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('005_nr_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    train('006_nr_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('006_r50_k1_resnet18_e1024_pt_norm_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet2',
+    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000,
+    #       norm_clusters=True)
+    train('005_r50_k1_resnet18_e1024_pt_norm_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet', m=12, d=4, k=1,
+          alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000, norm_clusters=True)
+    train('005_nr_k1_resnet18_e1024_pt_norm_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet', m=12, d=4, k=1,
+          alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=10, n_iterations=2000, norm_clusters=True)
+    train('006_nr_k1_resnet18_e1024_pt_norm_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet2', m=12, d=4, k=1,
+          alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=100, n_iterations=2000, norm_clusters=True)
+
+    train('005_r50_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('006_r50_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('005_nr_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    train('006_nr_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+
+
 
     # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
@@ -561,3 +578,16 @@ if __name__ == "__main__":
     # train('007j', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=200, calc_acc_every=10, plot_every=1, n_iterations=4000)
     # train('005', 'oxford_flowers', 'resnet50_e512', 'repmet', m=12, d=4, k=3, alpha=2.43)
     # train('006c', 'stanford_dogs', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1, refresh_clusters_every=10000)
+
+    """
+    NOTES:
+    
+    1) On flowers data when not normalising the cluster centroids they seem to push away from the unit sphere, generally
+        in the positive directions, at least when the emb = 2 (just so i can better vis), not sure if does when higher
+        dimension, it might be because in 2 dims the clusters being wrong is too much so pushes away first...
+    2) Refreshing the clusters would fix this (clusters moving away too much) to some extent, but it is a balancing act
+    3) The learning rate on the centroids for repmet also plays a role, too small (when had as one loss with net 1e-4)
+        and they don't move and too big and sample costs blow out into big numbers which causes 0's for the loss due to 
+        the exponential
+    4) 
+    """
