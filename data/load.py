@@ -5,7 +5,7 @@ from data.stanford_dogs import StanDogs
 from data.oxford_flowers import OxFlowers
 import configs
 
-def load_datasets(set_name):
+def load_datasets(set_name, input_size=224):
     if set_name == 'mnist':
         train_dataset = datasets.MNIST(root=os.path.join(configs.general.paths.imagesets, 'MNIST'),
                                                    train=True,
@@ -17,9 +17,8 @@ def load_datasets(set_name):
 
     elif set_name == 'stanford_dogs':
         input_transforms = transforms.Compose([
-            transforms.RandomResizedCrop(224, ratio=(1, 1.3)),
+            transforms.RandomResizedCrop(input_size, ratio=(1, 1.3)),
             transforms.RandomHorizontalFlip(),
-            # transforms.RandomResizedCrop(229, ratio=(1, 1.1)),
             transforms.ToTensor()])
 
         train_dataset = StanDogs(root=configs.general.paths.imagesets,
@@ -40,11 +39,7 @@ def load_datasets(set_name):
 
     elif set_name == 'oxford_flowers':
         input_transforms = transforms.Compose([
-            # transforms.CenterCrop(224),
-            # transforms.Resize((224, 224)),
-            # transforms.RandomResizedCrop(224, ratio=(1, 1.1)),
-            # transforms.RandomResizedCrop(224, ratio=(1, 1.3)),
-            transforms.RandomResizedCrop(299, ratio=(1, 1.3)),
+            transforms.RandomResizedCrop(input_size, ratio=(1, 1.3)),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor()])
 

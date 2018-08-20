@@ -67,6 +67,7 @@ class ResNetEncoder(nn.Module):
                 self.backbone = resnet50(pretrained=False, num_classes=emb_dim)
 
         if self.pretrained:
+
             if fc_dim:
                 self.fc1 = nn.Linear(ll_size, fc_dim)
                 self.bn1 = nn.BatchNorm1d(fc_dim)

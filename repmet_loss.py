@@ -29,7 +29,7 @@ class RepMetLoss(Loss):
         """Compute repmet loss.
 
         Given a tensor of features `x`, the assigned class for each example,
-        compute the repmet loss according to equations (4) and (5) in
+        compute the repmet loss according to equations (5) in
         https://arxiv.org/pdf/1806.04728.pdf.
 
         Args:
@@ -124,8 +124,7 @@ class RepMetLoss2(Loss):
         """Compute repmet loss.
 
         Given a tensor of features `x`, the assigned class for each example,
-        compute the repmet loss according to equations (4) and (5) in
-        https://arxiv.org/pdf/1806.04728.pdf.
+        compute the repmet loss version 2 see readme of details.
 
         Args:
             x: A batch of features.
