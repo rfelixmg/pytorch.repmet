@@ -105,9 +105,6 @@ class InceptionEncoder(nn.Module):
     def __init__(self, emb_dim, fc_dim=None, norm=True, pretrained=True, lock=False, transform_input=False):
         super(InceptionEncoder, self).__init__()
 
-        # TODO: fix inception backbone as suggested:
-        # https://discuss.pytorch.org/t/how-to-extract-features-of-an-image-from-a-trained-model/119/49
-
         self.fc_dim = fc_dim
         self.norm = norm
         self.pretrained = pretrained
