@@ -59,7 +59,7 @@ def train(run_id,
 
     # make list of cluster refresh if given an interval int
     if isinstance(refresh_clusters, int):
-        refresh_clusters_every = list(range(0, n_iterations, refresh_clusters))
+        refresh_clusters = list(range(0, n_iterations, refresh_clusters))
 
     # Get initial embedding using all samples in training set
     initial_reps = compute_all_reps(net, train_dataset, chunk_size)
@@ -260,7 +260,7 @@ def train(run_id,
                   savepath="%s/batch-clusters/i%06d%s" % (plots_path, iteration, plots_ext))
 
         train_reps_this_iter = False
-        if iteration in refresh_clusters_every:
+        if iteration in refresh_clusters:
             with open(save_path+'/log.txt', 'a') as f:
                 f.write('Refreshing clusters')
             print('Refreshing clusters')
@@ -487,34 +487,34 @@ if __name__ == "__main__":
     #       n_plot_classes=args.n_plot_classes)
 
     # MNIST Experiments
-    # train('001_r100_k1', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('002_r100_k1', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('002_nr_k1', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('003_r100_k1', 'mnist', 'mnist_default', 'repmet2', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('003_nr_k1', 'mnist', 'mnist_default', 'repmet2', m=8, d=8, k=1, alpha=1.0, refresh_clusters_every=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('001_r100_k1', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('002_r100_k1', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('002_nr_k1', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('003_r100_k1', 'mnist', 'mnist_default', 'repmet2', m=8, d=8, k=1, alpha=1.0, refresh_clusters=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('003_nr_k1', 'mnist', 'mnist_default', 'repmet2', m=8, d=8, k=1, alpha=1.0, refresh_clusters=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
 
     # Flowers Experiments
-    # train('004_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    # train('004_r50_k3_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
-    # train('004_r50_k1_inceptionv3_fc2048_e1024_pt_ul_norm', 'oxford_flowers', 'inceptionv3_fc2048_e1024_pt_ul_norm', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_r50_k3_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    # train('004_r50_k1_inceptionv3_fc2048_e1024_pt_ul_norm', 'oxford_flowers', 'inceptionv3_fc2048_e1024_pt_ul_norm', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
 
     # train('006_r50_k1_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024', 'repmet2',
-    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000,
+    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000,
     #       norm_clusters=True)
     # train('005_r50_k1_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1,
-    #       alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000, norm_clusters=True)
+    #       alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000, norm_clusters=True)
     # train('005_nr_k1_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1,
-    #       alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=10, n_iterations=2000, norm_clusters=True)
+    #       alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000, norm_clusters=True)
     # train('006_nr_k1_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1,
-    #       alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=100, n_iterations=2000, norm_clusters=True)
+    #       alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=100, n_iterations=2000, norm_clusters=True)
     #
-    # train('005_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('006_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('005_r1_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('006_r1_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('006_r0t2_k3_resnet18_e1024_lr.001_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=[0,1,2], calc_acc_every=10, plot_every=10, n_iterations=2000, norm_clusters=True)
-    # train('005_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('006_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('005_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('006_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('005_r1_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=1, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('006_r1_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters=1, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('006_r0t2_k3_resnet18_e1024_lr.001_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0,1,2], calc_acc_every=10, plot_every=10, n_iterations=2000, norm_clusters=True)
+    # train('005_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('006_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
 
     train('005_r0t2_k3_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024',
           'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
@@ -548,74 +548,74 @@ if __name__ == "__main__":
           'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
           n_iterations=2000, norm_clusters=True)
 
-    # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
-    # train('004_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    # train('005_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    # train('005_k1_nr', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    # train('005_k3_nr', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1000, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    # train('005_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    # train('004-10000_r50', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
-    # train('004-10000_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
-    # train('004_del', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=3000)
-    # train('004_del_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=3000)
-    # train('005_k1', 'oxford_flowers', 'inceptionv3_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
-    # train('004_k1', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
+    # train('004_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('005_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('005_k1_nr', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=1000, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('005_k3_nr', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=1000, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('005_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('004-10000_r50', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
+    # train('004-10000_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=10000)
+    # train('004_del', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=3000)
+    # train('004_del_k3', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=3000)
+    # train('005_k1', 'oxford_flowers', 'inceptionv3_e1024_pt', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    # train('004_k1', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
 
     # train('004_k1_resnet18_e512', 'oxford_flowers', 'resnet18_e512', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k1_resnet18_e1024_fc2048_norm', 'oxford_flowers', 'resnet18_e1024_fc2048_norm', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k1_resnet18_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet18_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k1_resnet18_e512_fc512', 'oxford_flowers', 'resnet18_e512_fc512', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k1_resnet18_e1024_fc1024', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k1_resnet18_e1024_pt', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k1_resnet18_e1024_fc1024_norm', 'oxford_flowers', 'resnet18_e1024_fc1024_norm', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
 
     # train('004_k1_inceptionv3_fc2048_e1024_pt_l', 'oxford_flowers', 'inceptionv3_fc2048_e1024_pt_l', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k1_resnet50_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet50_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k3_resnet50_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet50_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=3, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
     # train('005_k1_resnet50_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet50_e1024_fc2048_norm_pt', 'repmet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
     # train('005_k3_resnet50_e1024_fc2048_norm_pt', 'oxford_flowers', 'resnet50_e1024_fc2048_norm_pt', 'repmet', m=12, d=4, k=3, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
 
     # train('004_k1_resnet18_fc2048_e2_pt_ul', 'oxford_flowers', 'resnet18_fc2048_e2_pt_ul', 'magnet',
     # train('004_k1_resnet18_e1024_pt_norm', 'oxford_flowers', 'resnet18_e1024_pt_norm', 'magnet',
-    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
+    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_k1_resnet18_fc2048_e2_pt_ul_nr', 'oxford_flowers', 'resnet18_fc2048_e2_pt_ul', 'magnet',
-    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=10, calc_acc_every=10, plot_every=100, n_iterations=1000)
+    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters=10, calc_acc_every=10, plot_every=100, n_iterations=1000)
 
     # train('005_k1_inceptionv3_fc2048_e2_pt_ul_nr', 'oxford_flowers', 'inceptionv3_fc2048_e2_pt_ul', 'repmet2',
-    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=2000, calc_acc_every=10, plot_every=5, n_iterations=500)
+    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters=2000, calc_acc_every=10, plot_every=5, n_iterations=500)
     # train('005_k1_inceptionv3_fc2048_e2_pt_ul_r1', 'oxford_flowers', 'inceptionv3_fc2048_e2_pt_ul', 'repmet2',
-    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=1, calc_acc_every=10, plot_every=5, n_iterations=500)
+    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters=1, calc_acc_every=10, plot_every=5, n_iterations=500)
 
     # train('006_k3_resnet50_e1024_fc2048_norm_pt', 'stanford_dogs', 'resnet50_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=3, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
     # train('006_k1_resnet50_e1024_fc2048_norm_pt', 'stanford_dogs', 'resnet50_e1024_fc2048_norm_pt', 'magnet', m=12, d=4, k=1, alpha=1.0,
-    #       refresh_clusters_every=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    #       refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=2000)
     # train('003', 'oxford_flowers', 'resnet50_e512', 'magnet', m=12, d=4, k=3, alpha=1.0)
     # train('004', 'oxford_flowers', 'resnet50_e512', 'repmet', m=12, d=4, k=3, alpha=1.0)
-    # train('007b', 'oxford_flowers', 'resnet50_e512', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000)
-    # train('007c', 'oxford_flowers', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=5000) # norm=True
-    # train('007d', 'oxford_flowers', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=5000) # norm=False
-    # train('007e', 'oxford_flowers', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters_every=2000) # cosine dist
-    # train('007f', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=10, calc_acc_every=5, plot_every=5) # cosine dist
-    # train('008f', 'oxford_flowers', 'resnet18_e1024_fc1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=10, calc_acc_every=5, plot_every=5) # cosine dist
-    # train('008h', 'oxford_flowers', 'resnet18_e1024_fc1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=100, calc_acc_every=5, plot_every=5, n_iterations=2000) # cosine dist
-    # train('007g', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=40, calc_acc_every=250, plot_every=500) # cosine dist
-    # train('007j', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters_every=200, calc_acc_every=10, plot_every=1, n_iterations=4000)
+    # train('007b', 'oxford_flowers', 'resnet50_e512', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=2000)
+    # train('007c', 'oxford_flowers', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=5000) # norm=True
+    # train('007d', 'oxford_flowers', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=5000) # norm=False
+    # train('007e', 'oxford_flowers', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=2000) # cosine dist
+    # train('007f', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=10, calc_acc_every=5, plot_every=5) # cosine dist
+    # train('008f', 'oxford_flowers', 'resnet18_e1024_fc1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=10, calc_acc_every=5, plot_every=5) # cosine dist
+    # train('008h', 'oxford_flowers', 'resnet18_e1024_fc1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=100, calc_acc_every=5, plot_every=5, n_iterations=2000) # cosine dist
+    # train('007g', 'oxford_flowers', 'resnet18_e1024_fc1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=40, calc_acc_every=250, plot_every=500) # cosine dist
+    # train('007j', 'oxford_flowers', 'resnet18_e1024_fc2048_pt', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=200, calc_acc_every=10, plot_every=1, n_iterations=4000)
     # train('005', 'oxford_flowers', 'resnet50_e512', 'repmet', m=12, d=4, k=3, alpha=2.43)
-    # train('006c', 'stanford_dogs', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1, refresh_clusters_every=10000)
+    # train('006c', 'stanford_dogs', 'resnet50_e1024_fc1024', 'repmet', m=12, d=4, k=3, alpha=1, refresh_clusters=10000)
 
     """
     NOTES:
