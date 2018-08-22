@@ -8,7 +8,7 @@ import torch.backends.cudnn as cudnn
 import configs
 from utils import *
 from magnet_loss import MagnetLoss
-from repmet_loss import RepMetLoss, RepMetLoss2
+from repmet_loss import RepMetLoss, RepMetLoss2, RepMetLoss3
 from data.load import load_datasets
 from models.load import load_net
 
@@ -66,7 +66,7 @@ def train(run_id,
 
     # Create loss object (this stores the cluster centroids)
     if loss_type == "magnet":
-        the_loss = MagnetLoss(train_y, k, m, d, alpha=alpha, measure='euclidean')
+        the_loss = MagnetLoss(train_y, k, m, d, alpha=alpha)
 
         # Initialise the embeddings/representations/clusters
         print("Initialising the clusters")
@@ -77,9 +77,11 @@ def train(run_id,
         optimizerb = None
     elif loss_type == "repmet" or loss_type == "repmet2":
         if loss_type == "repmet":
-            the_loss = RepMetLoss(train_y, k, m, d, alpha=alpha, measure='euclidean')  # 'cosine')
+            the_loss = RepMetLoss(train_y, k, m, d, alpha=alpha)  # 'cosine')
         elif loss_type == "repmet2":
-            the_loss = RepMetLoss2(train_y, k, m, d, alpha=alpha, measure='euclidean')  # 'cosine')
+            the_loss = RepMetLoss2(train_y, k, m, d, alpha=alpha)  # 'cosine')
+        elif loss_type == "repmet3":
+            the_loss = RepMetLoss3(train_y, k, m, d, alpha=alpha)  # 'cosine')
 
         # Initialise the embeddings/representations/clusters
         print("Initialising the clusters")
@@ -516,17 +518,24 @@ if __name__ == "__main__":
     # train('005_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
     # train('006_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
 
-    train('005_r0t2_k3_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024',
-          'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=2000, norm_clusters=True)
-
-    train('006_r0t2_k3_resnet50_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet50_e1024',
+    train('test', 'oxford_flowers', 'resnet18_e1024',
           'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
           n_iterations=2000, norm_clusters=True)
-
-    train('006_r0t2_k3_inceptionv3_fc2048_e1024_clust-scaling-norm', 'oxford_flowers', 'inceptionv3_fc2048_e1024',
-          'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    train('test2', 'oxford_flowers', 'resnet18_e1024',
+          'repmet3', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
           n_iterations=2000, norm_clusters=True)
+
+    # train('005_r0t2_k3_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024',
+    #       'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=2000, norm_clusters=True)
+    #
+    # train('006_r0t2_k3_resnet50_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet50_e1024',
+    #       'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=2000, norm_clusters=True)
+
+    # train('006_r0t2_k3_inceptionv3_fc2048_e1024_clust-scaling-norm', 'oxford_flowers', 'inceptionv3_fc2048_e1024',
+    #       'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=2000, norm_clusters=True)
 
     train('006_r0t2_k3_inceptionv3_fc2048_e1024_ti_clust-scaling-norm', 'oxford_flowers', 'inceptionv3_fc2048_e1024_ti',
           'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
@@ -629,4 +638,17 @@ if __name__ == "__main__":
     4) Normalising the centroids helps for faster convergence, and also permits more variation in learning rate
     5) Cluster refresh rate inconclusive at the moment, seems necessary in first epoch or 2 but after not so... but how
         much better is it running kmeans every iteration vs never?
+    6) Normalising the centroids and the points means that the dist^2 can only be in range of [0, 4] (4=2^2 where 2 is
+        euc dist at opposite ends of unit sphere), this results in post the var_norm and exp that the range is 
+        [(far) 0.018, (close) 1], now with summing over the k and k*n_cls clusters we get [0.018*k, k] and 
+        [0.018*k*nc, k*nc] for the pre-ln numerator and denominator respectively, this leads to:
+            a) the denom will never be smaller than the numer because the numer sum is included (for repmet2, not
+                repmet1), therefore the ln() will always be less that 0, meaning the loss will never drop below alpha
+            b) in best (perfect) case it will be relu(-ln(k / 0.018*k*(nc-1) + k)+alpha) assuming alpha is 1:
+                nc = 102, k=1..K --> relu(2.036) lowest loss
+            c) so really the larger that the dist can be, the lower the denom can be but will never reach k meaning
+                -ln will always be positive, meaning loss always greater than alpha (for repmet2)
+        
+        So takeaway, with repmet2 the loss is restricted above alpha, and with cluster norming it is even further
+        restricted based on exp(max_dist)*num_classes
     """

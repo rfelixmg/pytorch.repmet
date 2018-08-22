@@ -15,7 +15,7 @@ from sklearn.cluster import KMeans
 
 class Loss(object):
     """Parent loss class with functions useful for both magnet and repmet losses."""
-    def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
+    def __init__(self, set_y, k, m, d, measure='euclidean_squared', alpha=1.0):
 
         self.unique_y = np.sort(np.unique(set_y))
         self.num_classes = self.unique_y.shape[0]
@@ -26,7 +26,9 @@ class Loss(object):
         self.d = d
         self.alpha = alpha
 
-        if measure == 'euclidean':
+        if measure == 'euclidean_squared':
+            self.calculate_distance = self.euclidean_squared_distance
+        elif measure == 'euclidean':
             self.calculate_distance = self.euclidean_distance
         elif measure == 'cosine':
             self.calculate_distance = self.cosine_distance
@@ -275,16 +277,13 @@ class Loss(object):
     def loss(self, x, y):
         raise NotImplementedError
 
-    # @staticmethod
-    # def magnet_dist(means, reps):
-    #     sample_costs = means - reps.unsqueeze(1)
-    #     sample_costs = sample_costs * sample_costs
-    #     sample_costs = sample_costs.sum(2)
-    #     return sample_costs
+    @staticmethod
+    def euclidean_squared_distance(x, y):
+        return torch.sum((x - y.unsqueeze(1)) ** 2, dim=2)
 
     @staticmethod
     def euclidean_distance(x, y):
-        return torch.sum((x - y.unsqueeze(1)) ** 2, dim=2)
+        return torch.sqrt(((x - y.unsqueeze(1)) ** 2).sum(2))
 
     @staticmethod
     def cosine_distance(x, y):
