@@ -519,9 +519,12 @@ if __name__ == "__main__":
     # train('006_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
 
     train('test', 'oxford_flowers', 'resnet18_e1024',
-          'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+          'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
           n_iterations=2000, norm_clusters=True)
     train('test2', 'oxford_flowers', 'resnet18_e1024',
+          'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+          n_iterations=2000, norm_clusters=True)
+    train('test3', 'oxford_flowers', 'resnet18_e1024',
           'repmet3', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
           n_iterations=2000, norm_clusters=True)
 
