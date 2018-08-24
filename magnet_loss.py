@@ -8,8 +8,8 @@ from utils import ensure_tensor
 
 class MagnetLoss(Loss):
     """Sample minibatches for magnet loss."""
-    def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
-        super().__init__(set_y, k, m, d, measure, alpha)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def loss(self, x, y):  # y isn't used as set out of batch is just based on means of x as the y's
         """Compute magnet loss.

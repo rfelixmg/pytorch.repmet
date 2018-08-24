@@ -75,7 +75,7 @@ def train(run_id,
         # Setup the optimizer
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=net_learning_rate)
         optimizerb = None
-    elif loss_type == "repmet" or loss_type == "repmet2":
+    elif loss_type == "repmet" or loss_type == "repmet2" or loss_type == "repmet3":
         if loss_type == "repmet":
             the_loss = RepMetLoss(train_y, k, m, d, alpha=alpha)  # 'cosine')
         elif loss_type == "repmet2":
@@ -105,7 +105,7 @@ def train(run_id,
         net.load_state_dict(state['state_dict'])
         optimizer.load_state_dict(state['optimizer'])
         if optimizerb:
-            optimizerb = state['optimizerb']
+            optimizerb.load_state_dict(state['optimizerb'])
 
         start_iteration = state['iteration']+1
         best_acc = state['best_acc']
@@ -518,15 +518,15 @@ if __name__ == "__main__":
     # train('005_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
     # train('006_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
 
-    train('test', 'oxford_flowers', 'resnet18_e1024',
-          'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=2000, norm_clusters=True)
-    train('test2', 'oxford_flowers', 'resnet18_e1024',
-          'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=2000, norm_clusters=True)
+    # train('testb', 'oxford_flowers', 'resnet18_e1024',
+    #       'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=2000, norm_clusters=True)
+    # train('test2', 'oxford_flowers', 'resnet18_e1024',
+    #       'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=2000, norm_clusters=True, save_every=200)
     train('test3', 'oxford_flowers', 'resnet18_e1024',
           'repmet3', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=2000, norm_clusters=True)
+          n_iterations=2000, norm_clusters=True, save_every=200)
 
     # train('005_r0t2_k3_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024',
     #       'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,

@@ -8,8 +8,8 @@ from utils import ensure_tensor, ensure_numpy
 
 class RepMetLoss(Loss):
 
-    def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
-        super().__init__(set_y, k, m, d, measure, alpha)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def update_clusters(self, set_x, max_iter=20):
         """
@@ -103,8 +103,8 @@ class RepMetLoss(Loss):
 # TODO: implement version 2 where they don't only take min of class in numerator
 class RepMetLoss2(Loss):
 
-    def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
-        super().__init__(set_y, k, m, d, measure, alpha)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def update_clusters(self, set_x, max_iter=20):
         """
@@ -179,8 +179,8 @@ class RepMetLoss2(Loss):
 # TODO: implement version 3 where they don't only take min of class in numerator, still exclude from denominator though
 class RepMetLoss3(Loss):
 
-    def __init__(self, set_y, k, m, d, measure='euclidean', alpha=1.0):
-        super().__init__(set_y, k, m, d, measure, alpha)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def update_clusters(self, set_x, max_iter=20):
         """
@@ -239,7 +239,7 @@ class RepMetLoss3(Loss):
         epsilon = 1e-8
 
         # Compute example losses and total loss
-        losses = F.relu(-torch.log((numerator-denominator) / (denominator + epsilon) + epsilon) + self.alpha)
+        losses = F.relu(-torch.log(numerator / (denominator - numerator + epsilon) + epsilon) + self.alpha)
 
         total_loss = losses.mean()
 
