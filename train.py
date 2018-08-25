@@ -527,9 +527,12 @@ if __name__ == "__main__":
     # train('test2', 'oxford_flowers', 'resnet18_e1024',
     #       'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
     #       n_iterations=1000, norm_clusters=True, save_every=200)
-    train('test3mdiv', 'oxford_flowers', 'resnet18_e1024',
-          'repmet3', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=1000, norm_clusters=True, save_every=200)
+    # train('test3', 'oxford_flowers', 'resnet18_e1024',
+    #       'repmet3', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, norm_clusters=True, save_every=200)
+    # train('myloss1', 'oxford_flowers', 'resnet18_e1024',
+    #       'myloss1', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, norm_clusters=True, save_every=200)
 
     # train('005_r0t2_k3_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024',
     #       'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
@@ -547,12 +550,12 @@ if __name__ == "__main__":
     #       'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
     #       n_iterations=2000, norm_clusters=True, save_every=200)
 
-    train('009_r0t2_k3_resnet18_e1024_clust-scaling-norm_crp', 'stanford_dogs', 'resnet18_e1024',
-          'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=1000, save_every=200)
-    train('007_r50_k3_resnet18_e1024_clust-scaling-norm_crp', 'stanford_dogs', 'resnet18_e1024',
-          'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10,
-          n_iterations=1000, save_every=200)
+    # train('009_r0t2_k3_resnet18_e1024_clust-scaling-norm_crp', 'stanford_dogs', 'resnet18_e1024',
+    #       'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, save_every=200)
+    # train('007_r50_k3_resnet18_e1024_clust-scaling-norm_crp', 'stanford_dogs', 'resnet18_e1024',
+    #       'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, save_every=200)
 
     train('009_r0t2_k3_resnet50_e1024_clust-scaling-norm_crp', 'stanford_dogs', 'resnet50_e1024',
           'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
@@ -561,6 +564,18 @@ if __name__ == "__main__":
     train('009_r0t2_k3_inceptionv3_fc2048_e1024_clust-scaling-norm_crp', 'stanford_dogs', 'inceptionv3_fc2048_e1024',
           'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
           n_iterations=1000, norm_clusters=True, save_every=200)
+
+    train('007_r50_k3_resnet18_e1024_clust-scaling-norm_crp', 'stanford_dogs', 'resnet18_e1024',
+          'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10,
+          n_iterations=1000, save_every=200, norm_clusters=True)
+
+    train('009_r0t2_k3_resnet50_e1024_crp', 'stanford_dogs', 'resnet50_e1024',
+          'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+          n_iterations=1000, save_every=200)
+
+    train('009_r0t2_k3_inceptionv3_fc2048_e1024_crp', 'stanford_dogs', 'inceptionv3_fc2048_e1024',
+          'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+          n_iterations=1000, save_every=200)
 
     # train('003_k3', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=3, alpha=1.0, refresh_clusters=1000, calc_acc_every=10, plot_every=10, n_iterations=1000)
     # train('004_k1', 'oxford_flowers', 'resnet18_e1024_pt', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10, n_iterations=1000)
