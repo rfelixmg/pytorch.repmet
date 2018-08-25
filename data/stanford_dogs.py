@@ -30,7 +30,7 @@ class StanDogs(data.Dataset):
     def __init__(self,
                  root,
                  train=True,
-                 cropped=False,
+                 cropped=True,
                  transform=None,
                  target_transform=None,
                  download=False):

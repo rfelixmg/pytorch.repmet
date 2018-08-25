@@ -230,7 +230,7 @@ class RepMetLoss3(Loss):
             self.avg_variance = (self.avg_variance + variance) / 2
 
         # Compute numerator
-        sample_costs_e = torch.exp(var_normalizer * sample_costs)
+        sample_costs_e = torch.exp(var_normalizer * sample_costs - self.alpha)
         numerator = (intra_cluster_mask.float() * sample_costs_e).sum(1)
 
         # Compute denominator
@@ -239,7 +239,7 @@ class RepMetLoss3(Loss):
         epsilon = 1e-8
 
         # Compute example losses and total loss
-        losses = F.relu(-torch.log(numerator / (denominator - numerator + epsilon) + epsilon) + self.alpha)
+        losses = F.relu(-torch.log(numerator / (denominator + epsilon) + epsilon))
 
         total_loss = losses.mean()
 

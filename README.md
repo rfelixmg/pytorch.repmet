@@ -43,6 +43,11 @@ Sums the distance of all representatives of the same class in the numerator, and
 
 ![eq repmetv2](https://latex.codecogs.com/gif.latex?L%28%5CTheta%20%29%20%3D%20%5Cfrac%7B1%7D%7BN%7D%5Csum_%7Bn%3D1%7D%5E%7BN%7D%5Cleft%20%7C%20-%5Ctextup%7Blog%7D%20%5Cleft%20%28%20%5Cfrac%7B%5Cunderset%7Bi%3AC%28R_i%29%3D%20C%28E_n%29%7D%5Csum%20e%5E%7B-%5Cfrac%7B1%7D%7B2%5Csigma%5E2%7D%5Cleft%20%5C%7C%20E_n%20-%20R_i%20%5Cright%20%5C%7C%5E2_2%7D%7D%7B%5Cunderset%7Bi%7D%5Csum%20e%5E%7B-%5Cfrac%7B1%7D%7B2%5Csigma%5E2%7D%5Cleft%20%5C%7C%20E_n%20-%20R_i%20%5Cright%20%5C%7C%5E2_2%7D%7D%20%5Cright%20%29%20&plus;%20%5Calpha%20%5Cright%20%7C_&plus;)
 
+### MyLoss
+Testing my own loss as the RepMet's don't make sense to me yet... (never reach 0). My loss is defined as:
+![eq mylossv1](https://latex.codecogs.com/gif.latex?L%28%5CTheta%20%29%20%3D%20%5Cfrac%7B1%7D%7BN%7D%20%5Csum_%7Bn%3D1%7D%5E%7BN%7D%20%5Cfrac%7B1%7D%7BJ%7D%20%5Csum_%7Bj%3D1%7D%5E%7BJ%7D%20%5Cleft%20%7C%20-%5Cfrac%7B1%7D%7B2%5Csigma%20%5E2%7D%20%28%5Cleft%20%5C%7C%20E_n%20-%20R_j%20%5Cright%20%5C%7C%20-%20%5Cunderset%7Bi%3AC%28R_i%29%3DC%28E_n%29%7D%7B%5Ctextup%7Bmax%7D%7D%28%5Cleft%20%5C%7C%20E_n%20-%20R_i%5Cright%20%5C%7C%29%20-%20%5Calpha%29%20%5Cright%20%7C_&plus;)
+
+
 ## Datasets
 Currently works on MNIST, working on getting the implementation to work with [Oxford Flowers 102](http://www.robots.ox.ac.uk/~vgg/data/flowers/102/) and [Stanford Dogs](http://vision.stanford.edu/aditya86/ImageNetDogs/) at the moment.
 
