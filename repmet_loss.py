@@ -207,7 +207,7 @@ class RepMetLoss3(Loss):
         """
 
         # Compute distance of each example to each cluster centroid (euclid without the root)
-        sample_costs = self.calculate_distance(self.centroids, x)
+        distances = self.calculate_distance(self.centroids, x)
 
         # Compute the two masks selecting the sample_costs related to each class(r)=class(cluster/rep)
         intra_cluster_mask = self.comparison_mask(y, torch.from_numpy(self.cluster_classes).cuda())
@@ -224,20 +224,20 @@ class RepMetLoss3(Loss):
             self.avg_variance = (self.avg_variance + variance) / 2
 
         # Compute numerator
-        sample_costs_e = torch.exp(var_normalizer * sample_costs - self.alpha)
-        numerator = (intra_cluster_mask.float() * sample_costs_e).sum(1)
+        numerator_pre_mask = torch.exp(var_normalizer * distances)
+        numerator = (intra_cluster_mask.float() * numerator_pre_mask).sum(1)
 
         # Compute denominator
-        denominator = sample_costs_e.sum(1)
+        denominator = numerator_pre_mask.sum(1)
         # Compute example losses and total loss
         epsilon = 1e-8
 
         # Compute example losses and total loss
-        losses = F.relu(-torch.log(numerator / (denominator - numerator + epsilon) + epsilon))
+        losses = F.relu(-torch.log(numerator / (denominator - numerator + epsilon) + epsilon) + self.alpha)
 
         total_loss = losses.mean()
 
-        _, preds = sample_costs.min(1)
+        _, preds = distances.min(1)
         preds = ensure_tensor(self.cluster_classes[preds]).cuda()  # convert from cluster ids to class ids
         acc = torch.eq(y, preds).float().mean()
 
