@@ -42,23 +42,23 @@ class MyLoss1(Loss):
         """
 
         # Compute distance of each example to each cluster centroid (euclid without the root)
-        sample_costs = self.calculate_distance(self.centroids, x)
+        distances = self.calculate_distance(self.centroids, x)
 
         # Compute the mask selecting the sample_costs related to each class(e)=class(cluster/rep)
         intra_cluster_mask = self.comparison_mask(y, torch.from_numpy(self.cluster_classes).cuda())
 
         # make a mask for blocking out cluster / reps of classes that aren't represented in the batch
         intra_cluster_mask_b, _ = intra_cluster_mask.max(0)
-        intra_cluster_mask_b = intra_cluster_mask_b.expand_as(sample_costs)
+        intra_cluster_mask_b = intra_cluster_mask_b.expand_as(distances)
 
         # Combine Masks into one
         inter_cluster_mask = (~intra_cluster_mask)*intra_cluster_mask_b
 
         # Get the furthest samples per rep with class(e)=class(rep)
-        per_cluster_max, _ = (intra_cluster_mask.float() * sample_costs).max(0)
+        per_cluster_max, _ = (intra_cluster_mask.float() * distances).max(0)
 
         # Minus these max's from the sample costs and then minus alpha (-dists within cluster_max+alpha per cluster)
-        sample_costs = sample_costs - per_cluster_max.expand_as(sample_costs) - self.alpha
+        sample_costs = distances - per_cluster_max.expand_as(distances) - self.alpha
 
         # hard code 0.5 [as suggested in paper] but seems to now work as well as the calculated variance in my exp
         variance = 0.5
@@ -77,7 +77,7 @@ class MyLoss1(Loss):
 
         total_loss = losses.mean()
 
-        _, preds = sample_costs.min(1)
+        _, preds = distances.min(1)
         preds = ensure_tensor(self.cluster_classes[preds]).cuda()  # convert from cluster ids to class ids
         acc = torch.eq(y, preds).float().mean()
 
