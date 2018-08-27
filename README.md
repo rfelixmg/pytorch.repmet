@@ -89,7 +89,16 @@ Run K-Means on set (ie. don't use trained clusters) and then greedily assign cla
 *Test Error can be considered `1-a` (1 minus these accuracies)*
 
 ## Results
-| First Header  | Second Header |
-| ------------- | ------------- |
-| Content Cell  | Content Cell  |
-| Content Cell  | Content Cell  |
+After 1000 iterations with ResNet with last fc layer being a 1024 embedding, M=12, D=4, K=3
+
+[Oxford Flowers 102](http://www.robots.ox.ac.uk/~vgg/data/flowers/102/)
+
+|              | Simple Error  | Magnet Error  | RepMet Error  |
+| ------------ | ------------  | ------------  | ------------  |
+| Loss         | Train | Test  | Train | Test  | Train | Test  |
+| ------------ | ------------  | ------------  | ------------  |
+| Magnet Loss  | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 |
+| RepMet.v1    | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 |
+| RepMet.v2    | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 |
+| RepMet.v3    | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 |
+| My Loss      | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 | 00.00 |
