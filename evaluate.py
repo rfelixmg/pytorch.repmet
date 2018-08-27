@@ -45,40 +45,43 @@ def evaluate(run_id,
     net.cuda()
     cudnn.benchmark = True
 
-    # Create loss object (this stores the cluster centroids)
+    # Load the particular iteration we want
     if load_iteration < 0:
         l = os.listdir(load_path)
         l.sort(reverse=True)
         state = torch.load("%s/%s" % (load_path, l[1])) # ignore log.txt
         print("Loading model: %s/%s" % (load_path, l[1]))
     else:
-        state = torch.load("%s/i%06d%s" % (load_path, load_iteration, '.pth')) # ignore log.txt
-        print("%s/i%06d%s" % (load_path, load_iteration, '.pth'))
+        if os.path.exists("%s/i%06d%s" % (load_path, load_iteration, '.pth')):
+            state = torch.load("%s/i%06d%s" % (load_path, load_iteration, '.pth')) # ignore log.txt
+            print("%s/i%06d%s" % (load_path, load_iteration, '.pth'))
+        else:
+            print("%s/i%06d%s doesn't exist... awkies. :/" % (load_path, load_iteration, '.pth'))
+            return
 
+    # Load the net state
     net.load_state_dict(state['state_dict'])
 
+    # Load the loss and cluster centres
     the_loss = state['the_loss']
-    plot_classes = state['plot_classes']
 
-    cluster_indexs = []
-    for ci in range(len(the_loss.cluster_classes)):
-        if the_loss.cluster_classes[ci] in plot_classes:
-            cluster_indexs.append(ci)
+    # Compute the embeddings fof the dataset
+    x = compute_reps(net, dataset, list(range(len(y))), chunk_size=chunk_size)
 
-    # calc all the accs
-    x = compute_reps(net, test_dataset, list(range(len(y))), chunk_size=chunk_size)
-
-    test_acc = the_loss.calc_accuracy(x, y, method='simple')
+    # Compute the accuracies
+    test_acc   = the_loss.calc_accuracy(x, y, method='simple')
     test_acc_b = the_loss.calc_accuracy(x, y, method='magnet')
     test_acc_c = the_loss.calc_accuracy(x, y, method='repmet')
     test_acc_d = the_loss.calc_accuracy(x, y, method='unsupervised')
 
     print("simple: %0.3f -- magnet: %0.3f -- repmet: %0.3f -- unsupervised: %0.3f" % (test_acc, test_acc_b, test_acc_c, test_acc_d))
 
+    # And hey, why not graph them all!
     graph(x, y,
           cluster_centers=ensure_numpy(the_loss.centroids),
           cluster_classes=the_loss.cluster_classes,
           savepath="%s/test-%s%s" % (plots_path, split, plots_ext))
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch DML Evaluation')
@@ -105,7 +108,9 @@ if __name__ == "__main__":
     #          load_iteration=args.load_iteration,
     #          load_path=args.load_path,
     #          plots_path=args.plots_path,
-    #          plots_ext=args.plots_ext,
-    #          n_plot_samples=args.n_plot_samples)
+    #          plots_ext=args.plots_ext)
 
-    evaluate('testml_nonsqr', 'oxford_flowers', 'resnet18_e1024', split='train')
+    evaluate('004_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', split='train', load_iteration=1000)
+    evaluate('004_r50_k1_resnet18_e1024_nc', 'oxford_flowers', 'resnet18_e1024', split='train', load_iteration=1000)
+    evaluate('004_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', split='test', load_iteration=1000)
+    evaluate('004_r50_k1_resnet18_e1024_nc', 'oxford_flowers', 'resnet18_e1024', split='test', load_iteration=1000)
