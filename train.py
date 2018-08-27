@@ -21,17 +21,17 @@ def train(run_id,
           model_name,
           loss_type,
           m, d, k, alpha,
-          n_iterations=0000,
+          n_iterations=1000,
           net_learning_rate=0.0001,
           cluster_learning_rate=0.001,
           chunk_size=32,
           refresh_clusters=50,
           norm_clusters=False,
-          calc_acc_every=100,
+          calc_acc_every=10,
           load_latest=True,
-          save_every=1000,
+          save_every=200,
           save_path=configs.general.paths.models,
-          plot_every=500,
+          plot_every=100,
           plots_path=configs.general.paths.graphing,
           plots_ext='.png',
           n_plot_samples=10,
@@ -417,10 +417,10 @@ def train(run_id,
 
     if save_path and iteration:
         if test_acc_d > best_acc:
-            print("Saving model (is best): %s/i%06d%s" % (save_path, iteration, '.pth'))
+            print("Saving model (is best): %s/i%06d%s" % (save_path, iteration+1, '.pth'))
             best_acc = test_acc_d
         else:
-            print("Saving model: %s/i%06d%s" % (save_path, iteration, '.pth'))
+            print("Saving model: %s/i%06d%s" % (save_path, iteration+1, '.pth'))
 
         state = {
             'iteration': iteration,
@@ -439,7 +439,7 @@ def train(run_id,
         }
         if optimizerb:
             state['optimizerb'] = optimizerb.state_dict()
-        torch.save(state, "%s/i%06d%s" % (save_path, iteration, '.pth'))
+        torch.save(state, "%s/i%06d%s" % (save_path, iteration+1, '.pth'))
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch DML Training')
@@ -451,16 +451,16 @@ def parse_args():
     parser.add_argument('--d', required=True, help='number of samples per cluster per batch', default=8, type=int)
     parser.add_argument('--k', required=True, help='number of clusters per class', default=3, type=int)
     parser.add_argument('--alpha', required=True, help='cluster margin', default=1.0, type=int)
-    parser.add_argument('--n_iterations', required=False, help='number of iterations to perform', default=5000, type=int)
+    parser.add_argument('--n_iterations', required=False, help='number of iterations to perform', default=1000, type=int)
     parser.add_argument('--net_learning_rate', required=False, help='the learning rate for the net', default=0.0001, type=float)
     parser.add_argument('--cluster_learning_rate', required=False, help='the learning rate for the modes (centroids), if -1 will use single optimiser for both net and modes', default=0.001, type=float)
     parser.add_argument('--chunk_size', required=False, help='the chunk/batch size for calculating embeddings (lower for less mem)', default=32, type=int)
-    parser.add_argument('--refresh_clusters', required=False, help='refresh the clusters every ? iterations or on these iterations (int or list or ints)', default=[0,1,2])
+    parser.add_argument('--refresh_clusters', required=False, help='refresh the clusters every ? iterations or on these iterations (int or list or ints)', default=50)
     parser.add_argument('--calc_acc_every', required=False, help='calculate the accuracy every ? iterations', default=10, type=int)
     parser.add_argument('--load_latest', required=False, help='load a model if presaved', default=True)
-    parser.add_argument('--save_every', required=False, help='save the model every ? iterations', default=500, type=int)
+    parser.add_argument('--save_every', required=False, help='save the model every ? iterations', default=200, type=int)
     parser.add_argument('--save_path', required=False, help='where to save the models', default=configs.general.paths.models)
-    parser.add_argument('--plot_every', required=False, help='plot graphs every ? iterations', default=10, type=int)
+    parser.add_argument('--plot_every', required=False, help='plot graphs every ? iterations', default=100, type=int)
     parser.add_argument('--plots_path', required=False, help='where to save the plots', default=configs.general.paths.graphing)
     parser.add_argument('--plots_ext', required=False, help='.png/.pdf', default='.png')
     parser.add_argument('--n_plot_samples', required=False, help='plot ? samples per class', default=10, type=int)
@@ -492,13 +492,42 @@ if __name__ == "__main__":
     #       n_plot_classes=args.n_plot_classes)
 
     # MNIST Experiments
-    # train('001_r100_k1', 'mnist', 'mnist_default', 'magnet', m=8, d=8, k=1, alpha=1.0, refresh_clusters=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('002_r100_k1', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('002_nr_k1', 'mnist', 'mnist_default', 'repmet', m=8, d=8, k=1, alpha=1.0, refresh_clusters=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('003_r100_k1', 'mnist', 'mnist_default', 'repmet2', m=8, d=8, k=1, alpha=1.0, refresh_clusters=100, calc_acc_every=10, plot_every=10, n_iterations=2000)
-    # train('003_nr_k1', 'mnist', 'mnist_default', 'repmet2', m=8, d=8, k=1, alpha=1.0, refresh_clusters=2000, calc_acc_every=10, plot_every=10, n_iterations=2000)
+    # train('001_r50_k1', 'mnist', 'mnist_default', 'magnet',
+    #       m=8, d=8, k=1, alpha=1.0, refresh_clusters=50, plot_every=10)
+    # train('002_r100_k1', 'mnist', 'mnist_default', 'repmet',
+    #       m=8, d=8, k=1, alpha=1.0, refresh_clusters=50, plot_every=10)
+    # train('002_nr_k1', 'mnist', 'mnist_default', 'repmet',
+    #       m=8, d=8, k=1, alpha=1.0, refresh_clusters=5000, plot_every=10)
+    # train('003_r100_k1', 'mnist', 'mnist_default', 'repmet2',
+    #       m=8, d=8, k=1, alpha=1.0, refresh_clusters=50, plot_every=10)
+    # train('003_nr_k1', 'mnist', 'mnist_default', 'repmet2',
+    #       m=8, d=8, k=1, alpha=1.0, refresh_clusters=5000, plot_every=10)
 
     # Flowers Experiments
+    train('004_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'magnet',
+          m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, n_iterations=4000)
+    # train('004_r50_k1_resnet18_e1024_nc', 'oxford_flowers', 'resnet18_e1024', 'magnet',
+    #       m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, n_iterations=4000, norm_clusters=True)
+    # train('004_r50_k3_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'magnet',
+    #       m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, n_iterations=4000)
+    # train('004_r50_k3_resnet18_e1024_nc', 'oxford_flowers', 'resnet18_e1024', 'magnet',
+    #       m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, n_iterations=4000, norm_clusters=True)
+
+    # train('005_r0t2_k3_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet',
+    #       m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], n_iterations=4000)
+    # train('005_r0t2_k3_resnet18_e1024_nc', 'oxford_flowers', 'resnet18_e1024', 'repmet',
+    #       m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], n_iterations=4000, norm_clusters=True)
+
+    # train('006_r0t2_k3_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2',
+    #       m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], n_iterations=4000)
+    # train('006_r0t2_k3_resnet18_e1024_nc', 'oxford_flowers', 'resnet18_e1024', 'repmet2',
+    #       m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], n_iterations=4000, norm_clusters=True)
+
+
+
+    ###############################################################################################################
+    # All below are extra experimental, will remove as time goes on in favour of those that work above ^^^^
+
     # train('004_r50_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_r50_k3_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
     # train('004_r50_k1_inceptionv3_fc2048_e1024_pt_ul_norm', 'oxford_flowers', 'inceptionv3_fc2048_e1024_pt_ul_norm', 'magnet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=100, n_iterations=2000)
@@ -533,9 +562,9 @@ if __name__ == "__main__":
     # train('test3', 'oxford_flowers', 'resnet18_e1024',
     #       'repmet3', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
     #       n_iterations=1000, norm_clusters=True, save_every=200)
-    train('myloss2', 'oxford_flowers', 'resnet18_e1024',
-          'myloss1', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=1000, norm_clusters=True, save_every=200)
+    # train('myloss2', 'oxford_flowers', 'resnet18_e1024',
+    #       'myloss1', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, norm_clusters=True, save_every=200)
 
     # train('005_r0t2_k3_resnet18_e1024_clust-scaling-norm', 'oxford_flowers', 'resnet18_e1024',
     #       'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
