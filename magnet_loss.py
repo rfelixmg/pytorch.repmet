@@ -47,7 +47,7 @@ class MagnetLoss(Loss):
         # Compute variance of intra-cluster distances
         N = x.shape[0]
         variance = intra_cluster_costs.sum() / float((N - 1))
-        var_normalizer = -1 / (2 * variance**2)  # unsure whether this should be squared, is in eq(5) but not in eq(4)
+        var_normalizer = -1 / (2 * variance)  # unsure whether this should be squared, is in eq(5) but not in eq(4)
 
         if not self.avg_variance:
             self.avg_variance = variance
