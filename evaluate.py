@@ -108,4 +108,4 @@ if __name__ == "__main__":
     #          plots_ext=args.plots_ext,
     #          n_plot_samples=args.n_plot_samples)
 
-    evaluate('testml_nonsqr', 'oxford_flowers', 'resnet18_e1024')
+    evaluate('testml_nonsqr', 'oxford_flowers', 'resnet18_e1024', split='train')

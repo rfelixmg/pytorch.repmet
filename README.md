@@ -49,6 +49,10 @@ Testing my own loss as the RepMet's don't make sense to me yet... (never reach 0
  
 ![eq mylossv1](https://latex.codecogs.com/gif.latex?L%28%5CTheta%20%29%20%3D%20%5Cfrac%7B1%7D%7BN%7D%20%5Csum_%7Bn%3D1%7D%5E%7BN%7D%20%5Cfrac%7B1%7D%7BJ%7D%20%5Csum_%7Bj%3D1%7D%5E%7BJ%7D%20%5Cleft%20%7C%20-%5Cfrac%7B1%7D%7B2%5Csigma%20%5E2%7D%20%28%5Cleft%20%5C%7C%20E_n%20-%20R_j%20%5Cright%20%5C%7C_2%20-%20%5Cunderset%7Bi%3AC%28R_i%29%3DC%28E_n%29%7D%7B%5Ctextup%7Bmax%7D%7D%28%5Cleft%20%5C%7C%20E_n%20-%20R_i%5Cright%20%5C%7C_2%29%20-%20%5Calpha%29%20%5Cright%20%7C_&plus;)
 
+Although it works better using squared euclidean like the other losses... hmm
+ 
+![eq mylossv2](https://latex.codecogs.com/gif.latex?L%28%5CTheta%20%29%20%3D%20%5Cfrac%7B1%7D%7BN%7D%20%5Csum_%7Bn%3D1%7D%5E%7BN%7D%20%5Cfrac%7B1%7D%7BJ%7D%20%5Csum_%7Bj%3D1%7D%5E%7BJ%7D%20%5Cleft%20%7C%20-%5Cfrac%7B1%7D%7B2%5Csigma%20%5E2%7D%20%28%5Cleft%20%5C%7C%20E_n%20-%20R_j%20%5Cright%20%5C%7C_2%5E2%20-%20%5Cunderset%7Bi%3AC%28R_i%29%3DC%28E_n%29%7D%7B%5Ctextup%7Bmax%7D%7D%28%5Cleft%20%5C%7C%20E_n%20-%20R_i%5Cright%20%5C%7C_2%5E2%29%20-%20%5Calpha%29%20%5Cright%20%7C_&plus;)
+
 Takes max distance of embeddings with their same-class clusters/reps/modes plus the alpha margin, and subtracts this from
 every distance for all embeddings. We only sum the J clusters/reps that correspond to the classes seen in the batch
 (which is different from what repmet seems to do [have to check with authors], but same as magnet [as the means are taken]).
@@ -89,15 +93,17 @@ Run K-Means on set (ie. don't use trained clusters) and then greedily assign cla
 *Test Error can be considered `1-a` (1 minus these accuracies)*
 
 ## Results (Coming Soon)
-After 1000 iterations with pretrained ResNet18 with last fc layer replaced with a 1024 embedding layer, M=12, D=4, K=3
+These results are calculated with `evaluate.py` and reference the accuracy calculations above.
+
+After 1000 iterations with pretrained ResNet18 with last fc layer replaced with a 1024 embedding layer, M=12, D=4, K=3.
 
 [Oxford Flowers 102](http://www.robots.ox.ac.uk/~vgg/data/flowers/102/)
 
-|              | Simple Error   | Magnet Error   | RepMet Error   |
-| ------------ | -------------: | -------------: | -------------: |
-| **Loss**     |**Train (Test)**|**Train (Test)**|**Train (Test)**|
-| *Magnet Loss*| 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
-| *RepMet.v1*  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
-| *RepMet.v2*  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
-| *RepMet.v3*  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
-| *My Loss*    | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
+|              | Simple Error   | Magnet Error   | RepMet Error   | Unsup. Error   |
+| ------------ | -------------: | -------------: | -------------: | -------------: |
+| **Loss**     |**Train (Test)**|**Train (Test)**|**Train (Test)**|**Train (Test)**|
+| *Magnet Loss*| 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
+| *RepMet.v1*  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
+| *RepMet.v2*  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
+| *RepMet.v3*  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
+| *My Loss*    | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  | 00.00 (00.00)  |
