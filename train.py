@@ -78,13 +78,13 @@ def train(run_id,
         optimizerb = None
     elif loss_type == "repmet" or loss_type == "repmet2" or loss_type == "repmet3" or loss_type == "myloss1":
         if loss_type == "repmet":
-            the_loss = RepMetLoss(train_y, k, m, d, alpha=alpha)  # 'cosine')
+            the_loss = RepMetLoss(train_y, k, m, d, alpha=alpha)
         elif loss_type == "repmet2":
-            the_loss = RepMetLoss2(train_y, k, m, d, alpha=alpha)  # 'cosine')
+            the_loss = RepMetLoss2(train_y, k, m, d, alpha=alpha)
         elif loss_type == "repmet3":
-            the_loss = RepMetLoss3(train_y, k, m, d, alpha=alpha)  # 'cosine')
+            the_loss = RepMetLoss3(train_y, k, m, d, alpha=alpha)
         elif loss_type == "myloss1":
-            the_loss = MyLoss1(train_y, k, m, d, alpha=alpha, measure='euclidean')  # 'cosine')
+            the_loss = MyLoss1(train_y, k, m, d, alpha=alpha)
 
         # Initialise the embeddings/representations/clusters
         print("Initialising the clusters")
@@ -108,7 +108,7 @@ def train(run_id,
         net.load_state_dict(state['state_dict'])
         optimizer.load_state_dict(state['optimizer'])
         if optimizerb:
-            optimizerb.load_state_dict(state['optimizerb'])  # Todo check clusters are loaded here .. test 3 from 800 onwards
+            optimizerb.load_state_dict(state['optimizerb'])
 
         start_iteration = state['iteration']+1
         best_acc = state['best_acc']
