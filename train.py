@@ -84,7 +84,7 @@ def train(run_id,
         elif loss_type == "repmet3":
             the_loss = RepMetLoss3(train_y, k, m, d, alpha=alpha)  # 'cosine')
         elif loss_type == "myloss1":
-            the_loss = MyLoss1(train_y, k, m, d, alpha=alpha)  # 'cosine')
+            the_loss = MyLoss1(train_y, k, m, d, alpha=alpha, measure='euclidean')  # 'cosine')
 
         # Initialise the embeddings/representations/clusters
         print("Initialising the clusters")
@@ -521,19 +521,19 @@ if __name__ == "__main__":
     # train('005_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
     # train('006_nr_k1_resnet18_e1024', 'oxford_flowers', 'resnet18_e1024', 'repmet2', m=12, d=4, k=1, alpha=1.0, refresh_clusters=5000, calc_acc_every=10, plot_every=10, n_iterations=2000)
 
-    train('testml', 'oxford_flowers', 'resnet18_e1024',
-          'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10,
-          n_iterations=1000, norm_clusters=True, save_every=200)
-    train('test', 'oxford_flowers', 'resnet18_e1024',
-          'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=1000, norm_clusters=True)
-    train('test2', 'oxford_flowers', 'resnet18_e1024',
-          'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=1000, norm_clusters=True, save_every=200)
-    train('test3', 'oxford_flowers', 'resnet18_e1024',
-          'repmet3', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
-          n_iterations=1000, norm_clusters=True, save_every=200)
-    train('myloss1', 'oxford_flowers', 'resnet18_e1024',
+    # train('testml_nonsqr', 'oxford_flowers', 'resnet18_e1024',
+    #       'magnet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=50, calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, norm_clusters=True, save_every=200)
+    # train('test', 'oxford_flowers', 'resnet18_e1024',
+    #       'repmet', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, norm_clusters=True)
+    # train('test2', 'oxford_flowers', 'resnet18_e1024',
+    #       'repmet2', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, norm_clusters=True, save_every=200)
+    # train('test3', 'oxford_flowers', 'resnet18_e1024',
+    #       'repmet3', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
+    #       n_iterations=1000, norm_clusters=True, save_every=200)
+    train('myloss2', 'oxford_flowers', 'resnet18_e1024',
           'myloss1', m=12, d=4, k=3, alpha=1.0, refresh_clusters=[0, 1, 2], calc_acc_every=10, plot_every=10,
           n_iterations=1000, norm_clusters=True, save_every=200)
 

@@ -11,6 +11,7 @@ class MyLoss1(Loss):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+
     def update_clusters(self, set_x, max_iter=20):
         """
         Given an array of representations for the entire training set,
@@ -62,7 +63,7 @@ class MyLoss1(Loss):
 
         # hard code 0.5 [as suggested in paper] but seems to now work as well as the calculated variance in my exp
         variance = 0.5
-        var_normalizer = -1 / (2 * variance)  # this will be -1
+        var_normalizer = -1 / (2 * variance**2)
 
         if not self.avg_variance:
             self.avg_variance = variance
